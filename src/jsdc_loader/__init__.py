@@ -1,3 +1,3 @@
-from .jsdc_loader import JSDC_Loader
+from .jsdc_loader import jsdc_load, jsdc_dump
 
-__all__ = ['JSDC_Loader']
+__all__ = ['jsdc_load', 'jsdc_dump']

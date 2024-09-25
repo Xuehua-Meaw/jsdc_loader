@@ -1,0 +1,25 @@
+{
+    "controller_id": "controller_01",
+    "controller_type": "controller_type_01",
+    "controller_version": "controller_version_01",
+    "utc_offset": 9.0,
+    "app": {
+        "user": {
+            "name": "John Doe",
+            "age": 30,
+            "married": false,
+            "user_type": "USER"
+        },
+        "database": {
+            "host": "localhost",
+            "port": 3306,
+            "user": "root",
+            "password": "password",
+            "ips": [
+                "127.0.0.1",
+                "127.0.0.2"
+            ],
+            "primary_user": null
+        }
+    }
+}

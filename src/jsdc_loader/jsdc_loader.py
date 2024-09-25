@@ -1,10 +1,11 @@
-from typing import get_type_hints, TypeVar, Any
+from typing import Optional, get_args, get_type_hints, TypeVar, Any, get_origin, Union
 from enum import Enum
 from dataclasses import dataclass, is_dataclass
 import json
 
 T = TypeVar('T', bound=dataclass) # type hinting for dataclass
 def jsdc_load(data_path: str, data_class: T, encoding: str = 'utf-8') -> T:
+    # Recursive function to convert a dictionary to a dataclass
     def __dict_to_dataclass(c_obj: Any, c_data: dict):
         t_hints: dict = get_type_hints(type(c_obj))
         for key, value in c_data.items():
@@ -16,14 +17,13 @@ def jsdc_load(data_path: str, data_class: T, encoding: str = 'utf-8') -> T:
                 else:
                     if e_type is not None:
                         try:
-                            if issubclass(e_type, Enum):
-                                value = e_type[value]
-                            else:
-                                value = e_type(value)
+                            if not type(None) in get_args(e_type):
+                                if isinstance(e_type, type) and issubclass(e_type, Enum):
+                                    value = e_type[value]
+                                else:
+                                    value = e_type(value)
                         except (ValueError, KeyError):
                             raise ValueError(f'invalid type for key {key}, expected {e_type}, got {type(value)}')
-                    if e_type is not None and not isinstance(value, e_type):
-                        raise TypeError(f'Invalid type for key {key}: expected {e_type}, got {type(value)}')
                     setattr(c_obj, key, value)
             else:
                 raise ValueError(f'unknown data key: {key}')
@@ -35,6 +35,7 @@ def jsdc_load(data_path: str, data_class: T, encoding: str = 'utf-8') -> T:
             raise ValueError('not supported file format, only json is supported')
     if not is_dataclass(data_class):
         raise ValueError('data_class must be a dataclass')
+    
     root_obj: T = data_class()
     __dict_to_dataclass(root_obj, data)
 
@@ -42,6 +43,7 @@ def jsdc_load(data_path: str, data_class: T, encoding: str = 'utf-8') -> T:
 
 
 def jsdc_dump(obj: T, output_path: str, encoding: str = 'utf-8', indent: int = 4) -> None:
+    # Recursive function to convert a dataclass to a dictionary
     def __dataclass_to_dict(obj: Any) -> Any:
         if isinstance(obj, Enum):
             return obj.name
@@ -52,8 +54,17 @@ def jsdc_dump(obj: T, output_path: str, encoding: str = 'utf-8', indent: int = 4
             t_hints = get_type_hints(type(obj))
             for key, value in vars(obj).items():
                 e_type = t_hints.get(key)
-                if e_type is not None and not isinstance(value, e_type):
-                    raise TypeError(f'Invalid type for key {key}: expected {e_type}, got {type(value)}')
+                if e_type is not None:
+                    o_type = get_origin(e_type)
+                    if o_type is Union:
+                        if not any(isinstance(value, t) for t in get_args(e_type)):
+                            raise TypeError(f'Invalid type for key {key}: expected {e_type}, got {type(value)}')
+                    elif o_type is not None:
+                        if not isinstance(value, o_type):
+                            raise TypeError(f'Invalid type for key {key}: expected {o_type}, got {type(value)}')
+                    else:
+                        if not isinstance(value, e_type):
+                            raise TypeError(f'Invalid type for key {key}: expected {e_type}, got {type(value)}')
                 result[key] = __dataclass_to_dict(value)
             return result
         return obj
@@ -75,14 +86,13 @@ if __name__ == '__main__':
         port: int = 3306
         user: str = 'root'
         password: str = 'password'
+        ips: list[str] = field(default_factory=lambda: ['127.0.0.1'])
+        primary_user: Optional[str] = field(default_factory=lambda: None)
 
     jsdc_dump(DatabaseConfig(), 'config.json')
     data = jsdc_load('config.json', DatabaseConfig)
     print(data.host)
 
-
-    from dataclasses import dataclass, field
-    from enum import Enum, auto
 
     data = DatabaseConfig()
     jsdc_dump(data, 'config.json')
@@ -130,13 +140,11 @@ if __name__ == '__main__':
     jsdc_dump(controller_data, 'config.json')
 
     loaded_controller_data = jsdc_load('config.json', ControllerConfig)
-    print(loaded_controller_data)
+    loaded_controller_data.app.database.ips.append('127.0.0.2')
 
-    try:
-        loaded_controller_data = jsdc_load('config.json', AppConfig)
-        print(loaded_controller_data)
-    except Exception as e:
-        print(e)
+    jsdc_dump(loaded_controller_data, 'config.json')
+    controller_data = jsdc_load('config.json', ControllerConfig)
+    print(controller_data.app.database.ips)
 
     import os
     os.remove('config.json')
