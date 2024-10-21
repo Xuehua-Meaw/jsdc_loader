@@ -11,22 +11,49 @@ def jsdc_load(data_path: str, data_class: T, encoding: str = 'utf-8') -> T:
         for key, value in c_data.items():
             if hasattr(c_obj, key):
                 e_type = t_hints.get(key)
-                if isinstance(value, dict):
-                    n_obj = getattr(c_obj, key)
-                    __dict_to_dataclass(n_obj, value)
-                else:
-                    if e_type is not None:
+                if e_type is not None:
+                    # Handle Enum types first
+                    if isinstance(e_type, type) and issubclass(e_type, Enum):
                         try:
-                            if not type(None) in get_args(e_type):
+                            enum_value = e_type[value]
+                            setattr(c_obj, key, enum_value)
+                        except KeyError:
+                            raise ValueError(f'Invalid Enum value for key {key}: {value}')
+                    # Handle nested dataclasses
+                    elif is_dataclass(e_type):
+                        n_obj = e_type()
+                        __dict_to_dataclass(n_obj, value)
+                        setattr(c_obj, key, n_obj)
+                    # Handle lists of dataclasses
+                    elif get_origin(e_type) is list and is_dataclass(get_args(e_type)[0]):
+                        item_type = get_args(e_type)[0]
+                        n_list = [item_type(**item) for item in value]
+                        setattr(c_obj, key, n_list)
+                    else:
+                        try:
+                            origin = get_origin(e_type)
+                            if origin is Union:
+                                args = get_args(e_type)
+                                # Handle Optional types (e.g., Union[Type, NoneType])
+                                non_none_args = [arg for arg in args if arg is not type(None)]
+                                if len(non_none_args) == 1:
+                                    actual_type = non_none_args[0]
+                                    if isinstance(actual_type, type) and issubclass(actual_type, Enum):
+                                        value = actual_type[value]
+                                    else:
+                                        value = actual_type(value)
+                                else:
+                                    raise TypeError(f'Unsupported Union type for key {key}: {e_type}')
+                            else:
                                 if isinstance(e_type, type) and issubclass(e_type, Enum):
                                     value = e_type[value]
                                 else:
                                     value = e_type(value)
-                        except (ValueError, KeyError):
-                            raise ValueError(f'invalid type for key {key}, expected {e_type}, got {type(value)}')
-                    setattr(c_obj, key, value)
+                        except (ValueError, KeyError) as ex:
+                            raise ValueError(f'Invalid type for key {key}, expected {e_type}, got {type(value).__name__}') from ex
+                        setattr(c_obj, key, value)
             else:
-                raise ValueError(f'unknown data key: {key}')
+                raise ValueError(f'Unknown data key: {key}')
 
     with open(data_path, 'r', encoding=encoding) as f:
         try:
@@ -49,7 +76,7 @@ def jsdc_dump(obj: T, output_path: str, encoding: str = 'utf-8', indent: int = 4
             return obj.name
         elif isinstance(obj, list):
             return [__dataclass_to_dict(item) for item in obj]
-        elif hasattr(obj, '__dict__'):
+        elif is_dataclass(obj):
             result = {}
             t_hints = get_type_hints(type(obj))
             for key, value in vars(obj).items():
@@ -145,6 +172,23 @@ if __name__ == '__main__':
     jsdc_dump(loaded_controller_data, 'config.json')
     controller_data = jsdc_load('config.json', ControllerConfig)
     print(controller_data.app.database.ips)
+
+    @dataclass
+    class File_Hash:
+        sha512: str = field(default_factory=lambda: "")
+        xxhash: str = field(default_factory=lambda: "")
+
+    @dataclass
+    class Files_Hash:
+        file_hashes: list[File_Hash] = field(default_factory=lambda: [])
+
+    file_hashes = Files_Hash()
+    file_hashes.file_hashes.append(File_Hash(sha512='123', xxhash='456'))
+    file_hashes.file_hashes.append(File_Hash(sha512='789', xxhash='101'))
+    jsdc_dump(file_hashes, 'config.json')
+
+    loaded_file_hashes = jsdc_load('config.json', Files_Hash)
+    print(loaded_file_hashes.file_hashes)
 
     import os
     os.remove('config.json')
