@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Set
 import tempfile
 import os
 import unittest
@@ -135,6 +135,71 @@ class TestJSDCLoader(unittest.TestCase):
         self.assertEqual(loaded_api.servers[0].name, "backup")
         self.assertEqual(loaded_api.servers[1].port, 8082)
         self.assertFalse(loaded_api.servers[1].ssl)
+    
+    def test_hashable_model_set(self):
+        """Test serialization/deserialization of hashable dataclasses with set."""
+        # 杂鱼♡～为了让Model可哈希，本喵决定添加__hash__和__eq__方法喵～ 
+        @dataclass(frozen=True)  # 让这个数据类不可变，以便可以哈希
+        class Model:
+            base_url: str = ""
+            api_key: str = ""
+            model: str = ""
+
+            def __hash__(self):
+                return hash((self.base_url, self.api_key, self.model))  # 使用元组的哈希值
+
+            def __eq__(self, other):
+                if not isinstance(other, Model):
+                    return NotImplemented
+                return (self.base_url, self.api_key, self.model) == (other.base_url, other.api_key, other.model)  # 比较内容
+
+        @dataclass
+        class ModelList:
+            models: Set[Model] = field(default_factory=lambda: set()) 
+            
+        # 创建测试数据
+        model1 = Model(base_url="https://api1.example.com", api_key="key1", model="gpt-4")
+        model2 = Model(base_url="https://api2.example.com", api_key="key2", model="gpt-3.5")
+        model3 = Model(base_url="https://api3.example.com", api_key="key3", model="llama-3")
+        
+        model_list = ModelList()
+        model_list.models.add(model1)
+        model_list.models.add(model2)
+        model_list.models.add(model3)
+        
+        # 测试相同模型的哈希值和相等性
+        duplicate_model = Model(base_url="https://api1.example.com", api_key="key1", model="gpt-4")
+        model_list.models.add(duplicate_model)  # 这个不应该增加集合的大小
+        
+        self.assertEqual(len(model_list.models), 3)  # 验证重复模型没有被添加
+        self.assertEqual(hash(model1), hash(duplicate_model))  # 验证哈希函数工作正常
+        self.assertEqual(model1, duplicate_model)  # 验证相等性比较工作正常
+        
+        # 序列化和反序列化
+        jsdc_dump(model_list, self.temp_path)
+        loaded_model_list = jsdc_load(self.temp_path, ModelList)
+        
+        # 验证集合大小
+        self.assertEqual(len(loaded_model_list.models), 3)
+        
+        # 验证所有模型都被正确反序列化
+        loaded_models = sorted(loaded_model_list.models, key=lambda m: m.base_url)
+        original_models = sorted(model_list.models, key=lambda m: m.base_url)
+        
+        for i in range(len(original_models)):
+            self.assertEqual(loaded_models[i].base_url, original_models[i].base_url)
+            self.assertEqual(loaded_models[i].api_key, original_models[i].api_key)
+            self.assertEqual(loaded_models[i].model, original_models[i].model)
+        
+        # 验证集合操作仍然正常工作
+        new_model = Model(base_url="https://api4.example.com", api_key="key4", model="claude-3")
+        loaded_model_list.models.add(new_model)
+        self.assertEqual(len(loaded_model_list.models), 4)
+        
+        # 验证重复模型仍然不会被添加
+        duplicate_model_again = Model(base_url="https://api1.example.com", api_key="key1", model="gpt-4")
+        loaded_model_list.models.add(duplicate_model_again)
+        self.assertEqual(len(loaded_model_list.models), 4)
     
     def test_error_handling(self):
         """Test error handling."""
