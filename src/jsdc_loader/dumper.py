@@ -4,6 +4,7 @@ import os
 import json
 import datetime
 import uuid
+import tempfile
 from decimal import Decimal
 from typing import Any
 from dataclasses import is_dataclass
@@ -77,6 +78,8 @@ def jsdc_dump(obj: T, output_path: str, encoding: str = 'utf-8', indent: int = 4
     这个函数接收一个dataclass实例，并将其序列化表示写入到指定文件中，
     格式为JSON喵～输出文件可以使用指定的字符编码，JSON输出可以
     使用指定的缩进级别格式化喵～杂鱼一定会感激本喵的帮助的吧♡～
+    
+    本喵会使用临时文件进行安全写入，防止在写入过程中出错导致文件损坏喵～
 
     Args:
         obj (T): 要序列化的dataclass实例喵～
@@ -96,9 +99,12 @@ def jsdc_dump(obj: T, output_path: str, encoding: str = 'utf-8', indent: int = 4
     if indent < 0:
         raise ValueError("杂鱼♡～缩进必须是非负数喵！～负数是什么意思啦～")
 
+    # 获取输出文件的绝对路径喵～
+    abs_output_path = os.path.abspath(output_path)
+    directory = os.path.dirname(abs_output_path)
+    
     try:
         # 确保目录存在且可写喵～
-        directory = os.path.dirname(os.path.abspath(output_path))
         ensure_directory_exists(directory)
 
         if isinstance(obj, type):
@@ -107,10 +113,46 @@ def jsdc_dump(obj: T, output_path: str, encoding: str = 'utf-8', indent: int = 4
         if not (is_dataclass(obj) or isinstance(obj, BaseModel)):
             raise TypeError('杂鱼♡～obj必须是dataclass或Pydantic BaseModel实例喵！～')
             
-        # 杂鱼♡～直接使用jsdc_dumps序列化为字符串，然后写入文件喵～
+        # 杂鱼♡～先序列化为字符串喵～
         json_str = jsdc_dumps(obj, indent)
-        with open(output_path, 'w', encoding=encoding) as f:
-            f.write(json_str)
+        
+        # 杂鱼♡～使用临时文件进行安全写入喵～
+        # 在同一目录创建临时文件，确保重命名操作在同一文件系统内执行喵～
+        temp_file = tempfile.NamedTemporaryFile(
+            prefix=f'.{os.path.basename(abs_output_path)}.', 
+            dir=directory, 
+            suffix='.tmp',
+            delete=False,
+            mode='w',
+            encoding=encoding
+        )
+        
+        temp_path = temp_file.name
+        try:
+            # 杂鱼♡～写入临时文件喵～
+            temp_file.write(json_str)
+            # 必须先刷新缓冲区喵～
+            temp_file.flush()
+            # 确保文件内容已完全写入磁盘喵～然后再关闭文件～
+            os.fsync(temp_file.fileno())
+            temp_file.close()
+                
+            # 杂鱼♡～使用原子操作将临时文件重命名为目标文件喵～
+            # 在Windows上，如果目标文件已存在，可能会失败，所以先尝试删除喵～
+            if os.path.exists(abs_output_path):
+                os.remove(abs_output_path)
+                
+            # 杂鱼♡～安全地重命名文件喵～
+            os.rename(temp_path, abs_output_path)
+        except Exception as e:
+            # 杂鱼♡～如果出错，清理临时文件喵～
+            if os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                except:
+                    pass  # 杂鱼♡～如果连临时文件都删不掉，本喵也无能为力了喵～
+            raise e  # 杂鱼♡～重新抛出原始异常喵～
+            
     except OSError as e:
         raise OSError(f"杂鱼♡～创建目录或访问文件失败喵：{str(e)}～")
     except TypeError as e:
