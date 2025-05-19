@@ -4,7 +4,6 @@ from typing import Any, get_args, get_origin, Union, Type, Dict
 from dataclasses import is_dataclass
 from enum import Enum
 from pydantic import BaseModel
-import functools
 
 from .types import _TYPE_HINTS_CACHE
 
@@ -24,13 +23,54 @@ def validate_dataclass(cls: Any) -> None:
 
 def validate_type(key: str, value: Any, e_type: Any) -> None:
     """杂鱼♡～本喵帮你验证值是否匹配预期类型喵～本喵很擅长发现杂鱼的类型错误哦～"""
+    # 杂鱼♡～对于Any类型，本喵不做任何检查喵～它可以是任何类型～
+    if e_type is Any:
+        return
+    
     o_type = get_origin(e_type)
+    
+    # 杂鱼♡～对于Union类型，本喵需要特殊处理喵～
     if o_type is Union:
-        if value is not None and not any(isinstance(value, t) for t in get_args(e_type) if t is not type(None)):
+        # 如果值是None且Union包含Optional（即None类型），那么就是合法的喵～
+        if value is None and type(None) in get_args(e_type):
+            return
+        
+        # 对于非None值，我们需要检查它是否匹配Union中的任何类型喵～
+        args = get_args(e_type)
+        # 杂鱼♡～这里不使用isinstance检查，而是尝试递归验证每种可能的类型喵～
+        valid = False
+        for arg in args:
+            if arg is type(None) and value is None:
+                valid = True
+                break
+            try:
+                # 递归验证，如果没有抛出异常就是有效的喵～
+                validate_type(key, value, arg)
+                valid = True
+                break
+            except (TypeError, ValueError):
+                # 继续尝试下一个类型喵～
+                continue
+                
+        if not valid:
             raise TypeError(f'杂鱼♡～键{key}的类型无效喵：期望{e_type}，得到{type(value)}～你连类型都搞不清楚吗？～')
+    
+    # 杂鱼♡～对于其他复杂类型，如List、Dict等，本喵需要检查origin喵～
     elif o_type is not None:
+        # 对于列表、字典等容器类型，只需检查容器类型，不检查内容类型喵～
         if not isinstance(value, o_type):
             raise TypeError(f'杂鱼♡～键{key}的类型无效喵：期望{o_type}，得到{type(value)}～真是个笨蛋呢～')
+    
+    # 杂鱼♡～对于简单类型，直接使用isinstance喵～
     else:
-        if not isinstance(value, e_type):
+        # 对于Enum类型，我们需要特殊处理喵～
+        if isinstance(e_type, type) and issubclass(e_type, Enum):
+            if not isinstance(value, e_type):
+                # 对于已经是枚举实例的验证喵～
+                if isinstance(value, str) and hasattr(e_type, value):
+                    # 字符串值匹配枚举名，可以接受喵～
+                    return
+                raise TypeError(f'杂鱼♡～键{key}的类型无效喵：期望{e_type}，得到{type(value)}～')
+        elif not isinstance(value, e_type) and e_type is not Any:
+            # Any类型不做类型检查喵～
             raise TypeError(f'杂鱼♡～键{key}的类型无效喵：期望{e_type}，得到{type(value)}～') 

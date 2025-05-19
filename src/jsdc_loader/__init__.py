@@ -3,8 +3,8 @@
 from .loader import jsdc_load, jsdc_loads
 from .dumper import jsdc_dump
 
-__author__ = '39neko'
-__version__ = '0.1.0'
+__author__ = 'Neko'
+__version__ = '0.2.0'
 __all__ = ['jsdc_load', 'jsdc_loads', 'jsdc_dump']
 
 # 杂鱼♡～别忘了查看本喵的README.md喵～

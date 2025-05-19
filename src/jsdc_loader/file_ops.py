@@ -3,6 +3,9 @@
 import os
 import json
 from typing import Dict, Any
+import datetime
+import uuid
+from decimal import Decimal
 
 def ensure_directory_exists(directory_path: str) -> None:
     """
@@ -18,6 +21,28 @@ def ensure_directory_exists(directory_path: str) -> None:
             except OSError as e:
                 raise OSError(f"杂鱼♡～创建目录失败喵：{directory_path}，错误：{str(e)}～")
 
+# 杂鱼♡～本喵创建了一个支持复杂类型的JSON编码器喵～
+class ComplexJSONEncoder(json.JSONEncoder):
+    """自定义JSON编码器，支持datetime、UUID、Decimal等类型喵～"""
+    
+    def default(self, obj):
+        """处理非标准类型的JSON序列化喵～"""
+        if isinstance(obj, datetime.datetime):
+            return obj.isoformat()
+        elif isinstance(obj, datetime.date):
+            return obj.isoformat()
+        elif isinstance(obj, datetime.time):
+            return obj.isoformat()
+        elif isinstance(obj, datetime.timedelta):
+            return obj.total_seconds()
+        elif isinstance(obj, uuid.UUID):
+            return str(obj)
+        elif isinstance(obj, Decimal):
+            return str(obj)
+        elif isinstance(obj, set):
+            return list(obj)
+        return super().default(obj)
+
 def save_json_file(file_path: str, data: Dict[str, Any], encoding: str = 'utf-8', indent: int = 4) -> None:
     """
     杂鱼♡～本喵帮你把数据保存为JSON文件喵～
@@ -31,7 +56,7 @@ def save_json_file(file_path: str, data: Dict[str, Any], encoding: str = 'utf-8'
     """
     try:
         with open(file_path, 'w', encoding=encoding) as f:
-            json.dump(data, f, ensure_ascii=False, indent=indent)
+            json.dump(data, f, ensure_ascii=False, indent=indent, cls=ComplexJSONEncoder)
     except OSError as e:
         raise OSError(f"杂鱼♡～写入文件失败喵：{file_path}，错误：{str(e)}～")
     except TypeError as e:

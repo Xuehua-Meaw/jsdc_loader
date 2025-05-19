@@ -4,7 +4,6 @@ This module is kept for backward compatibility. Please use the new imported func
 """
 
 import warnings
-import functools
 
 from .loader import jsdc_load, jsdc_loads
 from .dumper import jsdc_dump

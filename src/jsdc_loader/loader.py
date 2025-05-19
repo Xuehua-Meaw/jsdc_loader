@@ -1,75 +1,86 @@
-"""杂鱼♡～这是本喵为你写的JSON到dataclass的反序列化函数喵～"""
+"""杂鱼♡～这是本喵为你写的JSDC Loader的加载函数喵～本喵可是很擅长把JSON变成对象呢～"""
 
 import json
 import os
-from typing import Union, TextIO, Any
+from typing import Type, Optional
 
-from .core import T, validate_dataclass, convert_dict_to_dataclass
+from .core import T, convert_dict_to_dataclass, validate_dataclass
 from .file_ops import check_file_size
 
-def jsdc_load(fp: Union[str, TextIO], data_class: T, encoding: str = 'utf-8', max_size: int = 10 * 1024 * 1024) -> T:
-    """
-    杂鱼♡～本喵帮你把JSON文件反序列化成dataclass对象喵～
+def jsdc_load(file_path: str, target_class: Type[T], encoding: str = 'utf-8', max_file_size: Optional[int] = None) -> T:
+    """杂鱼♡～本喵帮你从JSON文件加载数据并转换为指定的dataclass或Pydantic模型喵～
 
-    :param fp: 可以是文件路径或者支持.read()的文件对象喵～杂鱼知道这是什么意思吗？～
-    :param data_class: 要反序列化成的dataclass类型喵♡～本喵可以处理任何复杂类型哦～
-    :param encoding: 文件编码格式，默认是utf-8喵～杂鱼应该不需要改这个～
-    :param max_size: 最大允许的文件大小（字节），默认10MB喵～太大了本喵会生气的哦♡～
-    :return: data_class类型的实例喵～
-    :raises: ValueError：如果文件太大或路径无效时，本喵会抛出这个错误喵～
-    :raises: FileNotFoundError：找不到文件时，杂鱼是不是搞错路径了？～
-    :raises: PermissionError：没有权限访问文件时，杂鱼♡需要提升权限喵～
-    :raises: JSONDecodeError：JSON格式错误时，杂鱼写的JSON有问题喵！～
-    """
-    if isinstance(fp, str):
-        if not fp or not isinstance(fp, str):
-            raise ValueError("杂鱼♡～文件路径无效喵！～")
-        
-        try:
-            check_file_size(fp, max_size)
-            
-            with open(fp, 'r', encoding=encoding) as f:
-                return jsdc_loads(f.read(), data_class)
-        except FileNotFoundError:
-            raise FileNotFoundError(f"杂鱼♡～找不到文件喵：{fp}～肯定是杂鱼把路径搞错了喵！～")
-        except PermissionError:
-            raise PermissionError(f"杂鱼♡～没有权限访问文件喵：{fp}～需要提升权限才行喵～")
-        except UnicodeDecodeError:
-            raise ValueError(f"杂鱼♡～文件编码错误喵！～应该使用{encoding}编码的说～")
-    else:
-        try:
-            content = fp.read()
-            if len(content.encode('utf-8')) > max_size:
-                raise ValueError(f"杂鱼♡～内容太大了喵～超过了{max_size}字节的限制～本喵处理不了那么大的内容啦～")
-            return jsdc_loads(content, data_class)
-        except Exception as e:
-            raise ValueError(f"杂鱼♡～读取文件对象时出错喵：{str(e)}～真是个笨蛋呢～")
+    Args:
+        file_path (str): JSON文件的路径喵～杂鱼要保证路径正确哦～
+        target_class (Type[T]): 目标dataclass或Pydantic模型类喵～
+        encoding (str, optional): 文件编码，默认'utf-8'喵～
+        max_file_size (Optional[int], optional): 最大文件大小（字节）喵～为None表示不限制～
 
-def jsdc_loads(s: str, data_class: T) -> T:
-    """
-    杂鱼♡～本喵帮你把JSON字符串反序列化成dataclass对象喵～
+    Returns:
+        T: 从JSON数据创建的实例喵～杂鱼应该感谢本喵～
 
-    :param s: 含有JSON数据的字符串喵～
-    :param data_class: 要反序列化成的dataclass类型喵♡～
-    :return: data_class类型的实例喵～
-    :raises: ValueError：如果输入无效或类型不匹配，本喵会生气地抛出这个错误喵～
-    :raises: TypeError：如果data_class不是有效的dataclass或BaseModel，杂鱼是不是传错类型了？～
-    :raises: JSONDecodeError：JSON格式错误时，杂鱼写的JSON有问题喵！～
+    Raises:
+        FileNotFoundError: 如果文件不存在喵～杂鱼肯定是路径搞错了～
+        ValueError: 如果文件内容无效或太大喵～杂鱼的数据有问题吧～
+        TypeError: 如果target_class不是dataclass或BaseModel，杂鱼肯定传错类型了～
     """
-    if not isinstance(s, str):
-        raise ValueError("杂鱼♡～输入必须是字符串喵！～")
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"杂鱼♡～文件不存在喵：{file_path}～")
     
-    if not s.strip():
-        raise ValueError("杂鱼♡～输入字符串是空的或只有空白符喵！～")
-
+    # 检查文件大小喵～
+    if max_file_size is not None:
+        check_file_size(file_path, max_file_size)
+    
+    # 验证目标类喵～
+    validate_dataclass(target_class)
+    
     try:
-        data = json.loads(s)
-        if not isinstance(data, dict):
-            raise ValueError("杂鱼♡～JSON根必须是对象类型喵！～")
-        
-        validate_dataclass(data_class)
-        return convert_dict_to_dataclass(data, data_class)
+        with open(file_path, 'r', encoding=encoding) as f:
+            json_data = json.load(f)
+            
+        # 如果数据为空，杂鱼肯定是犯了错误喵～
+        if not json_data:
+            raise ValueError("杂鱼♡～JSON数据为空喵！～")
+            
+        # 转换数据为目标类型喵～
+        return convert_dict_to_dataclass(json_data, target_class)
     except json.JSONDecodeError as e:
-        raise ValueError(f"杂鱼♡～JSON格式无效喵：{str(e)}～")
+        raise ValueError(f"杂鱼♡～无效的JSON喵：{str(e)}～")
+    except UnicodeDecodeError as e:
+        raise ValueError(f"杂鱼♡～用{encoding}解码失败喵：{str(e)}～杂鱼是不是编码搞错了？～")
     except Exception as e:
-        raise ValueError(f"杂鱼♡～反序列化时出错喵：{str(e)}～") 
+        raise ValueError(f"杂鱼♡～加载或转换过程中出错喵：{str(e)}～")
+
+def jsdc_loads(json_str: str, target_class: Type[T]) -> T:
+    """杂鱼♡～本喵帮你从JSON字符串加载数据并转换为指定的dataclass或Pydantic模型喵～
+
+    Args:
+        json_str (str): JSON字符串喵～杂鱼提供的内容要合法哦～
+        target_class (Type[T]): 目标dataclass或Pydantic模型类喵～
+
+    Returns:
+        T: 从JSON数据创建的实例喵～杂鱼应该感谢本喵～
+
+    Raises:
+        ValueError: 如果字符串内容无效喵～杂鱼的数据有问题吧～
+        TypeError: 如果target_class不是dataclass或BaseModel，杂鱼肯定传错类型了～
+    """
+    if not json_str:
+        raise ValueError("杂鱼♡～JSON字符串为空喵！～")
+    
+    # 验证目标类喵～
+    validate_dataclass(target_class)
+    
+    try:
+        json_data = json.loads(json_str)
+            
+        # 如果数据为空，杂鱼肯定是犯了错误喵～
+        if not json_data:
+            raise ValueError("杂鱼♡～JSON数据为空喵！～")
+            
+        # 转换数据为目标类型喵～
+        return convert_dict_to_dataclass(json_data, target_class)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"杂鱼♡～无效的JSON喵：{str(e)}～")
+    except Exception as e:
+        raise ValueError(f"杂鱼♡～加载或转换过程中出错喵：{str(e)}～") 
