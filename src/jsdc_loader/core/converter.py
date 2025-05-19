@@ -9,7 +9,7 @@ import uuid
 from decimal import Decimal
 
 from .types import T
-from .validator import get_cached_type_hints
+from .validator import get_cached_type_hints, validate_type
 
 def convert_enum(key: str, value: Any, enum_type: Type[Enum]) -> Enum:
     """Convert a string value to an Enum member."""
@@ -195,7 +195,7 @@ def convert_dict_to_dataclass(data: dict, cls: T) -> T:
         
         return root_obj
 
-def convert_dataclass_to_dict(obj: Any) -> Any:
+def convert_dataclass_to_dict(obj: Any, parent_key: str = "", parent_type: Any = None) -> Any:
     """Convert a dataclass instance to a dictionary."""
     if obj is None:
         return None
@@ -214,7 +214,8 @@ def convert_dataclass_to_dict(obj: Any) -> Any:
     elif isinstance(obj, Decimal):
         return str(obj)
     elif isinstance(obj, tuple):
-        return [convert_dataclass_to_dict(item) for item in obj]
+        # 杂鱼♡～对于元组，转换为列表返回喵～
+        return [convert_dataclass_to_dict(item, f"{parent_key}[]", get_args(parent_type)[0] if parent_type and get_args(parent_type) else None) for item in obj]
     
     if isinstance(obj, BaseModel):
         # // 杂鱼♡～Pydantic V2 用 model_dump() 喵～不是 dict() 喵～
@@ -226,17 +227,85 @@ def convert_dataclass_to_dict(obj: Any) -> Any:
         return obj.name
     # // 杂鱼♡～本喵在这里加了一个 elif，如果遇到 set，就把它变成 list 喵！～
     elif isinstance(obj, set):
-        return [convert_dataclass_to_dict(item) for item in list(obj)] # // 杂鱼♡～要递归转换 set 里面的元素喵～
+        # 杂鱼♡～需要检查集合中元素的类型喵～
+        element_type = None
+        if parent_type and get_origin(parent_type) is set and get_args(parent_type):
+            element_type = get_args(parent_type)[0]
+            
+        result = []
+        for i, item in enumerate(obj):
+            if element_type:
+                # 杂鱼♡～验证集合中每个元素的类型喵～
+                item_key = f"{parent_key or 'set'}[{i}]"
+                try:
+                    validate_type(item_key, item, element_type)
+                except (TypeError, ValueError) as e:
+                    raise TypeError(f"杂鱼♡～序列化时集合元素类型验证失败喵：{item_key} {str(e)}～")
+                    
+            result.append(convert_dataclass_to_dict(item, f"{parent_key}[{i}]", element_type))
+            
+        return result
     elif isinstance(obj, list):
-        return [convert_dataclass_to_dict(item) for item in obj]
+        # 杂鱼♡～需要检查列表中元素的类型喵～
+        element_type = None
+        if parent_type and get_origin(parent_type) is list and get_args(parent_type):
+            element_type = get_args(parent_type)[0]
+            
+        result = []
+        for i, item in enumerate(obj):
+            if element_type:
+                # 杂鱼♡～验证列表中每个元素的类型喵～
+                item_key = f"{parent_key or 'list'}[{i}]"
+                try:
+                    validate_type(item_key, item, element_type)
+                except (TypeError, ValueError) as e:
+                    raise TypeError(f"杂鱼♡～序列化时列表元素类型验证失败喵：{item_key} {str(e)}～")
+                    
+            result.append(convert_dataclass_to_dict(item, f"{parent_key}[{i}]", element_type))
+            
+        return result
     elif isinstance(obj, dict):
-        return {k: convert_dataclass_to_dict(v) for k, v in obj.items()}
+        # 杂鱼♡～需要检查字典中键和值的类型喵～
+        key_type, val_type = None, None
+        if parent_type and get_origin(parent_type) is dict and len(get_args(parent_type)) == 2:
+            key_type, val_type = get_args(parent_type)
+            
+        result = {}
+        for k, v in obj.items():
+            if key_type:
+                # 杂鱼♡～验证字典键的类型喵～
+                key_name = f"{parent_key or 'dict'}.key"
+                try:
+                    validate_type(key_name, k, key_type)
+                except (TypeError, ValueError) as e:
+                    raise TypeError(f"杂鱼♡～序列化时字典键类型验证失败喵：{key_name} {str(e)}～")
+                    
+            if val_type:
+                # 杂鱼♡～验证字典值的类型喵～
+                val_key = f"{parent_key or 'dict'}[{k}]"
+                try:
+                    validate_type(val_key, v, val_type)
+                except (TypeError, ValueError) as e:
+                    raise TypeError(f"杂鱼♡～序列化时字典值类型验证失败喵：{val_key} {str(e)}～")
+                    
+            result[k] = convert_dataclass_to_dict(v, f"{parent_key}[{k}]", val_type)
+            
+        return result
     elif is_dataclass(obj):
         result = {}
         t_hints = get_cached_type_hints(type(obj))
         for key, value in vars(obj).items():
             e_type = t_hints.get(key)
-            # 杂鱼♡～这里我们不再使用validate_type来验证，因为我们只是要将值转换为字典喵～
-            result[key] = convert_dataclass_to_dict(value)
+            
+            # 杂鱼♡～验证dataclass字段类型喵～
+            if e_type is not None:
+                field_key = f"{parent_key}.{key}" if parent_key else key
+                try:
+                    validate_type(field_key, value, e_type)
+                except (TypeError, ValueError) as e:
+                    raise TypeError(f"杂鱼♡～序列化时类型验证失败喵：字段 '{field_key}' {str(e)}～")
+                
+            # 杂鱼♡～转换值为字典喵～递归时传递字段类型～
+            result[key] = convert_dataclass_to_dict(value, f"{parent_key}.{key}" if parent_key else key, e_type)
         return result
     return obj 

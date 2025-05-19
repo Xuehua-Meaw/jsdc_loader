@@ -1,6 +1,6 @@
 """杂鱼♡～这是本喵的验证工具喵～本喵可是非常严格的，不会让杂鱼传入错误的类型呢～"""
 
-from typing import Any, get_args, get_origin, Union, Type, Dict
+from typing import Any, get_args, get_origin, Union, Type, Dict, List, Set, Tuple
 from dataclasses import is_dataclass
 from enum import Enum
 from pydantic import BaseModel
@@ -54,6 +54,84 @@ def validate_type(key: str, value: Any, e_type: Any) -> None:
                 
         if not valid:
             raise TypeError(f'杂鱼♡～键{key}的类型无效喵：期望{e_type}，得到{type(value)}～你连类型都搞不清楚吗？～')
+    
+    # 杂鱼♡～对于列表类型，本喵需要检查容器类型和内容类型喵～
+    elif o_type is list or o_type is List:
+        if not isinstance(value, list):
+            raise TypeError(f'杂鱼♡～键{key}的类型无效喵：期望list，得到{type(value)}～真是个笨蛋呢～')
+        
+        # 杂鱼♡～检查列表元素类型喵～
+        args = get_args(e_type)
+        if args:
+            element_type = args[0]
+            for i, item in enumerate(value):
+                try:
+                    validate_type(f"{key}[{i}]", item, element_type)
+                except (TypeError, ValueError) as e:
+                    raise TypeError(f'杂鱼♡～列表{key}的第{i}个元素类型无效喵：{str(e)}')
+    
+    # 杂鱼♡～对于集合类型，本喵也需要检查内容类型喵～
+    elif o_type is set or o_type is Set:
+        if not isinstance(value, set):
+            raise TypeError(f'杂鱼♡～键{key}的类型无效喵：期望set，得到{type(value)}～真是个笨蛋呢～')
+        
+        # 杂鱼♡～检查集合元素类型喵～
+        args = get_args(e_type)
+        if args:
+            element_type = args[0]
+            for i, item in enumerate(value):
+                try:
+                    validate_type(f"{key}[{i}]", item, element_type)
+                except (TypeError, ValueError) as e:
+                    raise TypeError(f'杂鱼♡～集合{key}的某个元素类型无效喵：{str(e)}')
+    
+    # 杂鱼♡～对于字典类型，本喵需要检查键和值的类型喵～
+    elif o_type is dict:
+        if not isinstance(value, dict):
+            raise TypeError(f'杂鱼♡～键{key}的类型无效喵：期望dict，得到{type(value)}～真是个笨蛋呢～')
+        
+        # 杂鱼♡～检查字典键和值的类型喵～
+        args = get_args(e_type)
+        if len(args) == 2:
+            key_type, val_type = args
+            for k, v in value.items():
+                try:
+                    validate_type(f"{key}.key", k, key_type)
+                except (TypeError, ValueError) as e:
+                    raise TypeError(f'杂鱼♡～字典{key}的键类型无效喵：{str(e)}')
+                
+                try:
+                    validate_type(f"{key}[{k}]", v, val_type)
+                except (TypeError, ValueError) as e:
+                    raise TypeError(f'杂鱼♡～字典{key}的值类型无效喵：{str(e)}')
+    
+    # 杂鱼♡～对于元组类型，本喵也需要特殊处理喵～
+    elif o_type is tuple or o_type is Tuple:
+        if not isinstance(value, tuple):
+            raise TypeError(f'杂鱼♡～键{key}的类型无效喵：期望tuple，得到{type(value)}～真是个笨蛋呢～')
+        
+        args = get_args(e_type)
+        if not args:
+            # 无类型参数的元组，只检查是否为元组类型
+            pass
+        elif len(args) == 2 and args[1] is Ellipsis:
+            # Tuple[X, ...] 形式，所有元素都应该是同一类型
+            element_type = args[0]
+            for i, item in enumerate(value):
+                try:
+                    validate_type(f"{key}[{i}]", item, element_type)
+                except (TypeError, ValueError) as e:
+                    raise TypeError(f'杂鱼♡～元组{key}的第{i}个元素类型无效喵：{str(e)}')
+        else:
+            # Tuple[X, Y, Z] 形式，长度和类型都固定
+            if len(value) != len(args):
+                raise TypeError(f'杂鱼♡～元组{key}的长度无效喵：期望{len(args)}，得到{len(value)}～')
+            
+            for i, (item, arg_type) in enumerate(zip(value, args)):
+                try:
+                    validate_type(f"{key}[{i}]", item, arg_type)
+                except (TypeError, ValueError) as e:
+                    raise TypeError(f'杂鱼♡～元组{key}的第{i}个元素类型无效喵：{str(e)}')
     
     # 杂鱼♡～对于其他复杂类型，如List、Dict等，本喵需要检查origin喵～
     elif o_type is not None:

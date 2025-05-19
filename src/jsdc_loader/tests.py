@@ -864,5 +864,155 @@ class TestJSDCLoader(unittest.TestCase):
         self.assertEqual(len(loaded_from_str.items), 1000)
         self.assertEqual(loaded_from_str.items[500].id, 500)
         print("杂鱼♡～本喵测试性能成功了喵～")
+
+    def test_type_validation_on_dump(self):
+        """Test that jsdc_dump correctly validates types when serializing."""
+        # 杂鱼♡～本喵要测试序列化时的类型验证了喵～看看能不能正确抛出错误～
+
+        # 测试List[int]类型验证
+        @dataclass
+        class IntListConfig:
+            integers: List[int] = field(default_factory=list)
+            
+        # 初始化正确类型的数据
+        valid_config = IntListConfig(integers=[1, 2, 3, 4, 5])
+        
+        # 正常情况应该可以序列化
+        jsdc_dump(valid_config, self.temp_path)
+        
+        # 添加错误类型的数据
+        invalid_config = IntListConfig(integers=[1, 2, "3", 4, 5])  # 添加了一个字符串
+        
+        # 序列化应该抛出类型错误
+        with self.assertRaises(TypeError):
+            jsdc_dump(invalid_config, self.temp_path)
+            
+        # 测试Dict[str, int]类型验证
+        @dataclass
+        class DictConfig:
+            mapping: Dict[str, int] = field(default_factory=dict)
+            
+        # 初始化正确类型的数据
+        valid_dict_config = DictConfig(mapping={"a": 1, "b": 2, "c": 3})
+        
+        # 正常情况应该可以序列化
+        jsdc_dump(valid_dict_config, self.temp_path)
+        
+        # 添加错误类型的数据
+        invalid_dict_config = DictConfig(mapping={"a": 1, "b": "string", "c": 3})  # 值类型错误
+        
+        # 序列化应该抛出类型错误
+        with self.assertRaises(TypeError):
+            jsdc_dump(invalid_dict_config, self.temp_path)
+            
+        # 测试Dict[str, int]的键类型错误
+        invalid_key_config = DictConfig()
+        invalid_key_config.mapping = {1: 1, "b": 2}  # 键类型错误
+        
+        # 序列化应该抛出类型错误
+        with self.assertRaises(TypeError):
+            jsdc_dump(invalid_key_config, self.temp_path)
+            
+        # 测试嵌套容器的类型验证
+        @dataclass
+        class NestedConfig:
+            nested_list: List[List[int]] = field(default_factory=lambda: [[1, 2], [3, 4]])
+            nested_dict: Dict[str, List[int]] = field(default_factory=lambda: {"a": [1, 2], "b": [3, 4]})
+            
+        # 初始化正确类型的数据
+        valid_nested = NestedConfig()
+        
+        # 正常情况应该可以序列化
+        jsdc_dump(valid_nested, self.temp_path)
+        
+        # 嵌套列表中添加错误类型
+        invalid_nested1 = NestedConfig()
+        invalid_nested1.nested_list[0].append("not an int")
+        
+        # 序列化应该抛出类型错误
+        with self.assertRaises(TypeError):
+            jsdc_dump(invalid_nested1, self.temp_path)
+            
+        # 嵌套字典中添加错误类型
+        invalid_nested2 = NestedConfig()
+        invalid_nested2.nested_dict["a"].append("not an int")
+        
+        # 序列化应该抛出类型错误
+        with self.assertRaises(TypeError):
+            jsdc_dump(invalid_nested2, self.temp_path)
+            
+        # 测试可选类型的验证
+        @dataclass
+        class OptionalConfig:
+            maybe_int: Optional[int] = None
+            int_or_str: Union[int, str] = 42
+            
+        # 初始化正确类型的数据
+        valid_optional1 = OptionalConfig(maybe_int=None)
+        valid_optional2 = OptionalConfig(maybe_int=10)
+        valid_optional3 = OptionalConfig(int_or_str=99)
+        valid_optional4 = OptionalConfig(int_or_str="string")
+        
+        # 正常情况应该可以序列化
+        jsdc_dump(valid_optional1, self.temp_path)
+        jsdc_dump(valid_optional2, self.temp_path)
+        jsdc_dump(valid_optional3, self.temp_path)
+        jsdc_dump(valid_optional4, self.temp_path)
+        
+        # 使用不在Union中的类型
+        invalid_optional = OptionalConfig()
+        invalid_optional.int_or_str = [1, 2, 3]  # 列表不在Union[int, str]中
+        
+        # 序列化应该抛出类型错误
+        with self.assertRaises(TypeError):
+            jsdc_dump(invalid_optional, self.temp_path)
+            
+        # 测试集合类型
+        @dataclass
+        class SetConfig:
+            int_set: Set[int] = field(default_factory=set)
+            
+        # 初始化正确类型的数据
+        valid_set = SetConfig(int_set={1, 2, 3, 4, 5})
+        
+        # 正常情况应该可以序列化
+        jsdc_dump(valid_set, self.temp_path)
+        
+        # 添加错误类型的数据
+        invalid_set = SetConfig()
+        invalid_set.int_set = {1, "string", 3}
+        
+        # 序列化应该抛出类型错误
+        with self.assertRaises(TypeError):
+            jsdc_dump(invalid_set, self.temp_path)
+            
+        # 测试元组类型
+        @dataclass
+        class TupleConfig:
+            fixed_tuple: Tuple[int, str, bool] = field(default_factory=lambda: (1, "a", True))
+            var_tuple: Tuple[int, ...] = field(default_factory=lambda: (1, 2, 3))
+            
+        # 初始化正确类型的数据
+        valid_tuple = TupleConfig()
+        
+        # 正常情况应该可以序列化
+        jsdc_dump(valid_tuple, self.temp_path)
+        
+        # 使用错误类型
+        invalid_tuple1 = TupleConfig(fixed_tuple=(1, 2, True))  # 第二个元素应该是str
+        
+        # 序列化应该抛出类型错误
+        with self.assertRaises(TypeError):
+            jsdc_dump(invalid_tuple1, self.temp_path)
+            
+        # 可变长度元组中使用错误类型
+        invalid_tuple2 = TupleConfig(var_tuple=(1, 2, "3"))  # 应该全是int
+        
+        # 序列化应该抛出类型错误
+        with self.assertRaises(TypeError):
+            jsdc_dump(invalid_tuple2, self.temp_path)
+            
+        print("杂鱼♡～本喵测试序列化时的类型验证成功了喵～")
+
 if __name__ == '__main__':
     unittest.main() 

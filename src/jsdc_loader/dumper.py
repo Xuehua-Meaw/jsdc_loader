@@ -6,11 +6,12 @@ import datetime
 import uuid
 import tempfile
 from decimal import Decimal
-from typing import Any
+from typing import Any, get_type_hints
 from dataclasses import is_dataclass
 from pydantic import BaseModel
 
 from .core import T, convert_dataclass_to_dict
+from .core.validator import get_cached_type_hints
 from .file_ops import ensure_directory_exists
 
 # 杂鱼♡～本喵创建了一个自定义JSON编码器，这样就可以处理各种复杂类型喵～
@@ -65,7 +66,11 @@ def jsdc_dumps(obj: T, indent: int = 4) -> str:
         if not (is_dataclass(obj) or isinstance(obj, BaseModel)):
             raise TypeError('杂鱼♡～obj必须是dataclass或Pydantic BaseModel实例喵！～')
             
-        data_dict = convert_dataclass_to_dict(obj)
+        # 获取对象的类型提示
+        obj_type = type(obj)
+        
+        # 杂鱼♡～本喵把类型信息也传递给转换函数，这样就能进行完整的类型验证了喵～
+        data_dict = convert_dataclass_to_dict(obj, parent_key="root", parent_type=obj_type)
         return json.dumps(data_dict, ensure_ascii=False, indent=indent, cls=JSDCJSONEncoder)
     except TypeError as e:
         raise TypeError(f"杂鱼♡～类型验证失败喵：{str(e)}～真是个笨蛋呢～")
