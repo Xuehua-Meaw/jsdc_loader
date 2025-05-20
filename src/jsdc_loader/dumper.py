@@ -6,12 +6,11 @@ import datetime
 import uuid
 import tempfile
 from decimal import Decimal
-from typing import Any, get_type_hints
+from typing import Any
 from dataclasses import is_dataclass
 from pydantic import BaseModel
 
 from .core import T, convert_dataclass_to_dict
-from .core.validator import get_cached_type_hints
 from .file_ops import ensure_directory_exists
 
 # 杂鱼♡～本喵创建了一个自定义JSON编码器，这样就可以处理各种复杂类型喵～

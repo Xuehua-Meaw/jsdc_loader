@@ -1,4 +1,4 @@
-"""Test cases for JSDC Loader."""
+"""杂鱼♡～这是本喵为JSDC Loader编写的测试用例喵～真是个杂鱼♡～"""
 
 from dataclasses import dataclass, field, FrozenInstanceError
 from enum import Enum, auto
@@ -18,22 +18,21 @@ from .loader import jsdc_load, jsdc_loads
 from .dumper import jsdc_dump, jsdc_dumps
 
 class TestJSDCLoader(unittest.TestCase):
-    """Test suite for JSDC Loader."""
+    """杂鱼♡～这是本喵为JSDC Loader编写的测试用例喵～"""
     
     def setUp(self):
-        """Set up the test environment."""
+        """杂鱼♡～本喵要设置测试环境喵～"""
         self.temp_file = tempfile.NamedTemporaryFile(delete=False)
         self.temp_path = self.temp_file.name
         self.temp_file.close()
         
     def tearDown(self):
-        """Clean up the test environment."""
+        """杂鱼♡～本喵要清理测试环境喵～"""
         if os.path.exists(self.temp_path):
             os.remove(self.temp_path)
     
     def test_basic_serialization(self):
-        """Test basic dataclass serialization/deserialization."""
-        # 杂鱼♡～本喵要测试最基础的序列化/反序列化喵～
+        """杂鱼♡～本喵要测试最基础的序列化/反序列化喵～"""
         @dataclass 
         class DatabaseConfig:
             host: str = 'localhost'
@@ -53,8 +52,7 @@ class TestJSDCLoader(unittest.TestCase):
         print("杂鱼♡～本喵测试最基础的序列化/反序列化成功了喵～")
     
     def test_enum_serialization(self):
-        """Test enum serialization/deserialization."""
-        # 杂鱼♡～本喵要测试枚举的序列化/反序列化喵～
+        """杂鱼♡～本喵要测试枚举的序列化/反序列化喵～"""
         class UserType(Enum):
             ADMIN = auto()
             USER = auto()
@@ -76,8 +74,7 @@ class TestJSDCLoader(unittest.TestCase):
         self.assertEqual(user.user_type, loaded_user.user_type)
         print("杂鱼♡～本喵测试枚举的序列化/反序列化成功了喵～")
     def test_nested_dataclasses(self):
-        """Test nested dataclasses serialization/deserialization."""
-        # 杂鱼♡～本喵要测试嵌套的数据类了喵～
+        """杂鱼♡～本喵要测试嵌套的数据类了喵～"""
         class UserType(Enum):
             ADMIN = auto()
             USER = auto()
@@ -121,8 +118,7 @@ class TestJSDCLoader(unittest.TestCase):
         self.assertEqual(loaded_app.settings, {'theme': 'dark', 'language': 'en'})
         print("杂鱼♡～本喵测试嵌套的数据类成功了喵～")
     def test_pydantic_models(self):
-        """Test Pydantic models serialization/deserialization."""
-        # 杂鱼♡～本喵要测试Pydantic模型了喵～
+        """杂鱼♡～本喵要测试Pydantic模型了喵～"""
         class ServerConfig(BaseModel):
             name: str = "main"
             port: int = 8080
@@ -147,8 +143,7 @@ class TestJSDCLoader(unittest.TestCase):
         self.assertFalse(loaded_api.servers[1].ssl)
         print("杂鱼♡～本喵测试Pydantic模型成功了喵～")
     def test_hashable_model_set(self):
-        """Test serialization/deserialization of hashable dataclasses with set."""
-        # 杂鱼♡～为了让Model可哈希，本喵决定添加__hash__和__eq__方法喵～ 
+        """杂鱼♡～为了让Model可哈希，本喵决定添加__hash__和__eq__方法喵～"""
         @dataclass(frozen=True)  # 让这个数据类不可变，以便可以哈希
         class Model:
             base_url: str = ""
@@ -213,8 +208,7 @@ class TestJSDCLoader(unittest.TestCase):
         print("杂鱼♡～本喵测试可哈希的模型成功了喵～")
 
     def test_error_handling(self):
-        """Test error handling."""
-        # 杂鱼♡～本喵要测试错误处理了喵～
+        """杂鱼♡～本喵要测试错误处理了喵～"""
         @dataclass 
         class DatabaseConfig:
             host: str = 'localhost'
@@ -237,8 +231,7 @@ class TestJSDCLoader(unittest.TestCase):
             jsdc_dump(DatabaseConfig(), self.temp_path, indent=-1)
         print("杂鱼♡～本喵测试错误处理成功了喵～")
     def test_complex_types(self):
-        """Test serialization/deserialization of complex data types."""
-        # 杂鱼♡～本喵要测试各种复杂类型了喵～准备好被本喵的测试震撼吧～
+        """杂鱼♡～本喵要测试各种复杂类型了喵～准备好被本喵的测试震撼吧～"""
         @dataclass
         class ComplexConfig:
             created_at: datetime.datetime = field(default_factory=lambda: datetime.datetime.now())
@@ -263,8 +256,7 @@ class TestJSDCLoader(unittest.TestCase):
         print("杂鱼♡～本喵测试复杂类型成功了喵～")
 
     def test_deeply_nested_structures(self):
-        """Test serialization/deserialization of deeply nested structures."""
-        # 杂鱼♡～嘻嘻～本喵要测试超级深的嵌套结构了喵～杂鱼会头晕的吧～
+        """杂鱼♡～嘻嘻～本喵要测试超级深的嵌套结构了喵～杂鱼会头晕的吧～"""
         @dataclass
         class Level3:
             name: str = "level3"
@@ -306,8 +298,7 @@ class TestJSDCLoader(unittest.TestCase):
         print("杂鱼♡～本喵测试超级深的嵌套结构成功了喵～")
 
     def test_string_serialization(self):
-        """Test string serialization/deserialization with jsdc_dumps and jsdc_loads."""
-        # 杂鱼♡～本喵要测试字符串序列化了喵～这种基础功能都要本喵教你吗～
+        """杂鱼♡～本喵要测试字符串序列化了喵～这种基础功能都要本喵教你吗～"""
         @dataclass
         class Config:
             name: str = "test"
@@ -329,8 +320,7 @@ class TestJSDCLoader(unittest.TestCase):
         print("杂鱼♡～本喵测试字符串序列化成功了喵～")
         
     def test_empty_collections(self):
-        """Test serialization/deserialization of empty collections."""
-        # 杂鱼♡～本喵来测试空集合的情况了喵～杂鱼肯定忘记处理这种情况了吧～
+        """杂鱼♡～本喵来测试空集合的情况了喵～杂鱼肯定忘记处理这种情况了吧～"""
         @dataclass
         class EmptyCollections:
             empty_list: List[str] = field(default_factory=list)
@@ -352,8 +342,7 @@ class TestJSDCLoader(unittest.TestCase):
         print("杂鱼♡～本喵测试空集合成功了喵～")
         
     def test_inheritance(self):
-        """Test serialization/deserialization with inheritance."""
-        # 杂鱼♡～继承关系也要测试喵～本喵真是无所不能～
+        """杂鱼♡～本喵要测试继承关系了喵～本喵真是无所不能～"""
         @dataclass
         class BaseConfig:
             name: str = "base"
@@ -385,8 +374,7 @@ class TestJSDCLoader(unittest.TestCase):
         print("杂鱼♡～本喵测试继承关系成功了喵～")
 
     def test_union_types(self):
-        """Test serialization/deserialization with Union types."""
-        # 杂鱼♡～本喵要测试联合类型了喵～这可是个难点呢～让杂鱼见识一下本喵的厉害～
+        """杂鱼♡～本喵要测试联合类型了喵～这可是个难点呢～让杂鱼见识一下本喵的厉害～"""
         @dataclass
         class ConfigWithUnions:
             int_or_str: Union[int, str] = 42
@@ -412,8 +400,7 @@ class TestJSDCLoader(unittest.TestCase):
         print("杂鱼♡～本喵测试联合类型成功了喵～")
 
     def test_tuple_types(self):
-        """Test serialization/deserialization with tuple types."""
-        # 杂鱼♡～本喵要测试元组类型了喵～这种不可变序列也要正确处理才行～
+        """杂鱼♡～本喵要测试元组类型了喵～这种不可变序列也要正确处理才行～"""
         @dataclass
         class ConfigWithTuples:
             simple_tuple: Tuple[int, str, bool] = field(default_factory=lambda: (1, "test", True))
@@ -434,8 +421,7 @@ class TestJSDCLoader(unittest.TestCase):
         self.assertEqual(loaded_config.nested_tuple, ((1, 2), ("a", "b")))
         print("杂鱼♡～本喵测试元组类型成功了喵～")
     def test_any_type(self):
-        """Test serialization/deserialization with Any type."""
-        # 杂鱼♡～本喵现在要测试Any类型了喵～这可是最灵活的类型呢～
+        """杂鱼♡～本喵现在要测试Any类型了喵～这可是最灵活的类型呢～"""
         @dataclass
         class ConfigWithAny:
             any_field: Any = None
@@ -469,8 +455,7 @@ class TestJSDCLoader(unittest.TestCase):
         print("杂鱼♡～本喵测试Any类型成功了喵～")
         
     def test_large_json_payload(self):
-        """Test serialization/deserialization with large JSON payload."""
-        # 杂鱼♡～本喵要测试大型JSON负载了喵～看看杂鱼的程序能不能处理～
+        """杂鱼♡～本喵要测试大型JSON负载了喵～看看杂鱼的程序能不能处理～"""
         @dataclass
         class LargeDataConfig:
             items: List[Dict[str, Any]] = field(default_factory=list)
@@ -501,8 +486,7 @@ class TestJSDCLoader(unittest.TestCase):
         print("杂鱼♡～本喵测试大型JSON负载成功了喵～")
 
     def test_special_characters(self):
-        """Test serialization/deserialization with special characters."""
-        # 杂鱼♡～本喵要测试特殊字符了喵～这些字符可能会让你的程序崩溃喵～
+        """杂鱼♡～本喵要测试特殊字符了喵～这些字符可能会让你的程序崩溃喵～"""
         @dataclass
         class SpecialCharsConfig:
             escaped_chars: str = "\n\t\r\b\f"
@@ -526,31 +510,30 @@ class TestJSDCLoader(unittest.TestCase):
         print("杂鱼♡～本喵测试特殊字符成功了喵～")
         
     def test_frozen_dataclasses(self):
-        """Test serialization/deserialization of frozen dataclasses."""
-        # 杂鱼♡～本喵要测试不可变的数据类了喵～看看能不能正确处理～
+        """杂鱼♡～本喵要测试不可变的数据类了喵～看看能不能正确处理～"""
         @dataclass(frozen=True)
         class FrozenConfig:
             name: str = "default_name"
             version: int = 0
             tags: Tuple[str, ...] = field(default_factory=tuple)
             
-        # 创建不可变对象
+        # 杂鱼♡～本喵正在创建一个不可变对象喵～ 
         frozen = FrozenConfig(name="test", version=1, tags=("tag1", "tag2"))
         
-        # 序列化和反序列化
+        # 杂鱼♡～本喵要进行序列化和反序列化喵～ 
         jsdc_dump(frozen, self.temp_path)
         loaded_frozen = jsdc_load(self.temp_path, FrozenConfig)
         
-        # 验证值正确
+        # 杂鱼♡～验证值是否正确喵～ 
         self.assertEqual(loaded_frozen.name, "test")
         self.assertEqual(loaded_frozen.version, 1)
         self.assertEqual(loaded_frozen.tags, ("tag1", "tag2"))
         
-        # 验证不可变性
+        # 杂鱼♡～验证不可变性喵～ 
         with self.assertRaises(FrozenInstanceError):
             loaded_frozen.name = "modified"
             
-        # 测试嵌套冻结数据类
+        # 杂鱼♡～本喵要测试嵌套冻结数据类喵～ 
         @dataclass(frozen=True)
         class NestedFrozen:
             id: int = 0
@@ -567,35 +550,34 @@ class TestJSDCLoader(unittest.TestCase):
         print("杂鱼♡～本喵测试不可变的数据类成功了喵～")
 
     def test_default_values(self):
-        """Test handling of default values when fields are missing in JSON."""
-        # 杂鱼♡～本喵要测试默认值处理了喵～看看缺字段时能不能正确使用默认值～
+        """杂鱼♡～本喵要测试默认值处理了喵～看看缺字段时能不能正确使用默认值～"""
         @dataclass
+        # 杂鱼♡～本喵要定义一个带默认值的配置类喵～ 
         class ConfigWithDefaults:
-            # 将required字段也设置默认值，以便测试
-            required_int: int = 0  # 默认值为0
-            required_str: str = ""  # 默认为空字符串
-            optional_int: int = 42
-            optional_str: str = "default"
-            optional_list: List[str] = field(default_factory=lambda: ["default_item"])
-            optional_dict: Dict[str, int] = field(default_factory=lambda: {"default_key": 1})
-        
-        # 测试带默认值的字段：
-        # 使用部分JSON反序列化，这样其他字段应该使用默认值
+            # 杂鱼♡～将必需字段也设置默认值，以便测试喵～
+            required_int: int = 0  # 杂鱼♡～默认值为0喵～
+            required_str: str = ""  # 杂鱼♡～默认为空字符串喵～
+            optional_int: int = 42  # 杂鱼♡～可选整数，默认值为42喵～
+            optional_str: str = "default"  # 杂鱼♡～可选字符串，默认值为"default"喵～
+            optional_list: List[str] = field(default_factory=lambda: ["default_item"])  # 杂鱼♡～可选列表，默认值为["default_item"]喵～
+            optional_dict: Dict[str, int] = field(default_factory=lambda: {"default_key": 1})  # 杂鱼♡～可选字典，默认值为{"default_key": 1}喵～
+
+        # 杂鱼♡～本喵要测试带默认值的字段喵～ 
+        # 杂鱼♡～使用部分JSON反序列化，这样其他字段应该使用默认值喵～
         partial_json = '{"required_int": 456, "optional_int": 99, "optional_list": ["custom_item"]}'
         partial_config = jsdc_loads(partial_json, ConfigWithDefaults)
         
-        # 验证自定义值和默认值混合
-        self.assertEqual(partial_config.required_int, 456)  # 自定义值
-        self.assertEqual(partial_config.required_str, "")  # 默认值
-        self.assertEqual(partial_config.optional_int, 99)  # 自定义值
-        self.assertEqual(partial_config.optional_str, "default")  # 默认值
-        self.assertEqual(partial_config.optional_list, ["custom_item"])  # 自定义值
-        self.assertEqual(partial_config.optional_dict, {"default_key": 1})  # 默认值
+        # 杂鱼♡～验证自定义值和默认值混合喵～
+        self.assertEqual(partial_config.required_int, 456)  # 杂鱼♡～自定义值喵～
+        self.assertEqual(partial_config.required_str, "")  # 杂鱼♡～默认值喵～
+        self.assertEqual(partial_config.optional_int, 99)  # 杂鱼♡～自定义值喵～
+        self.assertEqual(partial_config.optional_str, "default")  # 杂鱼♡～默认值喵～
+        self.assertEqual(partial_config.optional_list, ["custom_item"])  # 杂鱼♡～自定义值喵～
+        self.assertEqual(partial_config.optional_dict, {"default_key": 1})  # 杂鱼♡～默认值喵～
         print("杂鱼♡～本喵测试默认值处理成功了喵～")
         
     def test_complex_union_types(self):
-        """Test serialization/deserialization with complex nested Union types."""
-        # 杂鱼♡～本喵要测试更简单的联合类型了喵～
+        """杂鱼♡～本喵要测试更复杂的联合类型了喵～"""
         @dataclass
         class ConfigA:
             type: str = "A"
@@ -611,21 +593,21 @@ class TestJSDCLoader(unittest.TestCase):
             name: str = "nested"
             value: Union[int, str] = 42
             
-        # 测试简单联合类型
+        # 杂鱼♡～测试简单联合类型喵～
         config1 = NestedConfig(value=42)
         config2 = NestedConfig(value="string")
         
-        # 序列化和反序列化第一个配置
+        # 杂鱼♡～序列化和反序列化第一个配置喵～
         jsdc_dump(config1, self.temp_path)
         loaded_config1 = jsdc_load(self.temp_path, NestedConfig)
         self.assertEqual(loaded_config1.value, 42)
         
-        # 序列化和反序列化第二个配置
+        # 杂鱼♡～序列化和反序列化第二个配置喵～
         jsdc_dump(config2, self.temp_path)
         loaded_config2 = jsdc_load(self.temp_path, NestedConfig)
         self.assertEqual(loaded_config2.value, "string")
         
-        # 测试对象联合类型
+        # 杂鱼♡～测试对象联合类型喵～
         @dataclass
         class ComplexConfig:
             value: Union[ConfigA, ConfigB] = field(default_factory=lambda: ConfigA())
@@ -633,13 +615,13 @@ class TestJSDCLoader(unittest.TestCase):
         complex1 = ComplexConfig(value=ConfigA(value_a=99))
         complex2 = ComplexConfig(value=ConfigB(value_b="test"))
         
-        # 序列化和反序列化第一个复杂配置
+        # 杂鱼♡～序列化和反序列化第一个复杂配置喵～
         jsdc_dump(complex1, self.temp_path)
         loaded_complex1 = jsdc_load(self.temp_path, ComplexConfig)
         self.assertEqual(loaded_complex1.value.type, "A")
         self.assertEqual(loaded_complex1.value.value_a, 99)
         
-        # 序列化和反序列化第二个复杂配置
+        # 杂鱼♡～序列化和反序列化第二个复杂配置喵～
         jsdc_dump(complex2, self.temp_path)
         loaded_complex2 = jsdc_load(self.temp_path, ComplexConfig)
         self.assertEqual(loaded_complex2.value.type, "B")
@@ -647,11 +629,10 @@ class TestJSDCLoader(unittest.TestCase):
         print("杂鱼♡～本喵测试更简单的联合类型成功了喵～")
 
     def test_custom_containers(self):
-        """Test serialization/deserialization with custom container types."""
-        # 杂鱼♡～本喵要测试自定义容器类型了喵～看你能不能处理这些特殊容器～
+        """杂鱼♡～本喵要测试自定义容器类型了喵～看你能不能处理这些特殊容器～"""
         @dataclass
         class CustomContainersConfig:
-            # 将类型声明为普通dict，但初始化时使用特殊容器
+            # 杂鱼♡～将类型声明为普通dict，但初始化时使用特殊容器喵～
             ordered_dict: Dict[str, int] = field(
                 default_factory=lambda: collections.OrderedDict([("a", 1), ("b", 2), ("c", 3)])
             )
@@ -662,30 +643,29 @@ class TestJSDCLoader(unittest.TestCase):
                 default_factory=lambda: collections.Counter(["a", "b", "a", "c", "a"])
             )
             
-        # 创建配置并添加一些值
+        # 杂鱼♡～创建配置并添加一些值喵～
         config = CustomContainersConfig()
         config.ordered_dict["d"] = 4
         config.default_dict["z"] = 30
         config.counter.update(["d", "e", "d"])
         
-        # 序列化和反序列化
+        # 杂鱼♡～序列化和反序列化喵～
         jsdc_dump(config, self.temp_path)
         loaded_config = jsdc_load(self.temp_path, CustomContainersConfig)
         
-        # 验证序列化和反序列化后的值（使用dict比较）
+        # 杂鱼♡～验证序列化和反序列化后的值（使用dict比较）喵～
         self.assertEqual(dict(config.ordered_dict), dict(loaded_config.ordered_dict))
         self.assertEqual(dict(config.default_dict), dict(loaded_config.default_dict))
         self.assertEqual(dict(config.counter), dict(loaded_config.counter))
         
-        # 验证字典内容
+        # 杂鱼♡～验证字典内容喵～
         self.assertEqual(dict(loaded_config.ordered_dict), {"a": 1, "b": 2, "c": 3, "d": 4})
         self.assertEqual(dict(loaded_config.default_dict), {"x": 10, "y": 20, "z": 30})
         self.assertEqual(dict(loaded_config.counter), {"a": 3, "b": 1, "c": 1, "d": 2, "e": 1})
         print("杂鱼♡～本喵测试自定义容器类型成功了喵～")
 
     def test_type_validation(self):
-        """Test type validation during deserialization."""
-        # 杂鱼♡～本喵要测试类型验证了喵～看看你能不能捕获错误的类型～
+        """杂鱼♡～本喵要测试类型验证了喵～看看你能不能捕获错误的类型～"""
         @dataclass
         class TypedConfig:
             integer: int = 0
@@ -694,17 +674,17 @@ class TestJSDCLoader(unittest.TestCase):
             float_val: float = 0.0
             list_of_ints: List[int] = field(default_factory=list)
             
-        # 创建具有错误类型的JSON
+        # 杂鱼♡～创建一个错误类型的JSON喵～
         invalid_json = '{"integer": "not an int"}'
         
-        # 类型错误应当在反序列化时被捕获
+        # 杂鱼♡～类型错误应该在反序列化时被捕获喵～
         with self.assertRaises(ValueError):
             jsdc_loads(invalid_json, TypedConfig)
             
-        # 创建有效的JSON
+        # 杂鱼♡～创建一个有效的JSON喵～
         valid_json = '{"integer": 42, "string": "text", "boolean": true, "float_val": 3.14, "list_of_ints": [1, 2, 3]}'
         
-        # 验证正确的类型可以被加载
+        # 杂鱼♡～验证正确的类型可以被加载喵～
         config = jsdc_loads(valid_json, TypedConfig)
         self.assertEqual(config.integer, 42)
         self.assertEqual(config.string, "text")
@@ -712,21 +692,20 @@ class TestJSDCLoader(unittest.TestCase):
         self.assertEqual(config.float_val, 3.14)
         self.assertEqual(config.list_of_ints, [1, 2, 3])
         
-        # 测试部分字段的JSON
+        # 杂鱼♡～测试部分字段的JSON喵～
         partial_json = '{"integer": 99}'
         
-        # 部分字段应该可以正确加载，其他字段使用默认值
+        # 杂鱼♡～部分字段应该可以正确加载，其他字段使用默认值喵～
         partial_config = jsdc_loads(partial_json, TypedConfig)
         self.assertEqual(partial_config.integer, 99)
         self.assertEqual(partial_config.string, "")
         self.assertFalse(partial_config.boolean)
         
-        # JSDC暂时不支持额外字段，所以不测试
+        # 杂鱼♡～JSDC暂时不支持额外字段，所以不测试喵～
         print("杂鱼♡～本喵测试类型验证成功了喵～")
 
     def test_formatting_options(self):
-        """Test serialization with different formatting options."""
-        # 杂鱼♡～本喵要测试不同的格式化选项了喵～看看美化JSON的效果～
+        """杂鱼♡～本喵要测试不同的格式化选项了喵～看看美化JSON的效果～"""
         @dataclass
         class SimpleConfig:
             name: str = "test"
@@ -737,57 +716,56 @@ class TestJSDCLoader(unittest.TestCase):
             
         config = SimpleConfig()
         
-        # 测试indent=0的情况（可能依赖于具体实现，可能仍会有换行）
+        # 杂鱼♡～测试indent=0的情况喵（可能依赖于具体实现，可能仍会有换行）～
         jsdc_dump(config, self.temp_path, indent=0)
         
-        # 加载并验证内容
+        # 杂鱼♡～加载并验证内容喵～ 
         loaded_zero_indent = jsdc_load(self.temp_path, SimpleConfig)
         self.assertEqual(loaded_zero_indent.name, "test")
         
-        # 测试其他缩进选项
+        # 杂鱼♡～测试其他缩进选项喵～
         for indent in [2, 4, 8]:
-            # 使用不同的缩进序列化
+            # 杂鱼♡～使用不同的缩进序列化喵～
             jsdc_dump(config, self.temp_path, indent=indent)
             
-            # 读取序列化后的内容
+            # 杂鱼♡～读取序列化后的内容喵～
             with open(self.temp_path, 'r') as f:
                 content = f.read()
                 
-            # 反序列化确认内容正确
+            # 杂鱼♡～反序列化确认内容正确喵～
             loaded = jsdc_load(self.temp_path, SimpleConfig)
             self.assertEqual(loaded.name, "test")
             self.assertEqual(loaded.values, [1, 2, 3])
             self.assertEqual(loaded.nested, {"a": 1, "b": [2, 3], "c": {"d": 4}})
             
-            # 如果有缩进，确认内容中包含换行符
+            # 杂鱼♡～如果有缩进，确认内容中包含换行符喵～
             self.assertIn("\n", content)
         
-        # 单独测试None缩进（使用默认值）
+        # 杂鱼♡～单独测试None缩进（使用默认值）喵～
         jsdc_dump(config, self.temp_path)  # 不指定indent参数
         
-        # 读取序列化后的内容并确认可以正确加载
+        # 杂鱼♡～读取序列化后的内容并确认可以正确加载喵～
         loaded = jsdc_load(self.temp_path, SimpleConfig)
         self.assertEqual(loaded.name, "test")
                 
-        # 测试有序字典
+        # 杂鱼♡～测试有序字典喵～
         config = SimpleConfig(
             nested={"z": 1, "y": 2, "x": 3, "w": 4, "v": 5}
         )
         
-        # 序列化带有顺序字典的配置
+        # 杂鱼♡～序列化带有顺序字典的配置喵～
         jsdc_dump(config, self.temp_path, indent=2)
         
-        # 读取序列化后的内容
+        # 杂鱼♡～读取序列化后的内容喵～
         with open(self.temp_path, 'r') as f:
             content = f.read()
             
-        # 反序列化确认内容正确
+        # 杂鱼♡～反序列化确认内容正确喵～
         loaded = jsdc_load(self.temp_path, SimpleConfig)
         self.assertEqual(loaded.nested, {"z": 1, "y": 2, "x": 3, "w": 4, "v": 5})
         print("杂鱼♡～本喵测试格式化选项成功了喵～")
     def test_performance(self):
-        """Test performance of serialization/deserialization."""
-        # 杂鱼♡～本喵要测试性能了喵～看看你的程序有多快～
+        """杂鱼♡～本喵要测试性能了喵～看看你的程序有多快～"""
         @dataclass
         class SimpleItem:
             id: int = 0
@@ -799,7 +777,7 @@ class TestJSDCLoader(unittest.TestCase):
             items: List[SimpleItem] = field(default_factory=list)
             metadata: Dict[str, Any] = field(default_factory=dict)
             
-        # 创建一个包含许多项的大型配置
+        # 杂鱼♡～创建一个包含许多项的大型配置喵～
         large_config = PerformanceConfig()
         for i in range(1000):
             large_config.items.append(SimpleItem(id=i, name=f"Item {i}", value=float(i) * 1.5))
@@ -817,27 +795,27 @@ class TestJSDCLoader(unittest.TestCase):
             }
         }
         
-        # 测量序列化性能
+        # 杂鱼♡～测量序列化性能喵～
         start_time = time.time()
         jsdc_dump(large_config, self.temp_path)
         serialize_time = time.time() - start_time
         
-        # 获取序列化文件大小
+        # 杂鱼♡～获取序列化文件大小喵～
         file_size = os.path.getsize(self.temp_path)
         
-        # 测量反序列化性能
+        # 杂鱼♡～测量反序列化性能喵～
         start_time = time.time()
         loaded_config = jsdc_load(self.temp_path, PerformanceConfig)
         deserialize_time = time.time() - start_time
         
-        # 记录性能指标（可以在测试输出中查看）
-        print(f"\nPerformance Test Results:")
-        print(f"File Size: {file_size} bytes")
-        print(f"Serialization Time: {serialize_time:.6f} seconds")
-        print(f"Deserialization Time: {deserialize_time:.6f} seconds")
-        print(f"Items Count: {len(loaded_config.items)}")
+        # 杂鱼♡～记录性能指标（可以在测试输出中查看喵）～
+        print(f"\n杂鱼♡～性能测试结果喵～")
+        print(f"文件大小: {file_size} 字节喵～")
+        print(f"序列化时间: {serialize_time:.6f} 秒喵～")
+        print(f"反序列化时间: {deserialize_time:.6f} 秒喵～")
+        print(f"项目数量: {len(loaded_config.items)} 个喵～")
         
-        # 确认数据完整性
+        # 杂鱼♡～确认数据完整性喵～
         self.assertEqual(len(loaded_config.items), 1000)
         self.assertEqual(loaded_config.items[500].id, 500)
         self.assertEqual(loaded_config.items[500].name, "Item 500")
@@ -866,100 +844,99 @@ class TestJSDCLoader(unittest.TestCase):
         print("杂鱼♡～本喵测试性能成功了喵～")
 
     def test_type_validation_on_dump(self):
-        """Test that jsdc_dump correctly validates types when serializing."""
-        # 杂鱼♡～本喵要测试序列化时的类型验证了喵～看看能不能正确抛出错误～
+        """杂鱼♡～本喵要测试序列化时的类型验证了喵～看看能不能正确抛出错误～"""
 
-        # 测试List[int]类型验证
+        # 杂鱼♡～测试List[int]类型验证喵～
         @dataclass
         class IntListConfig:
             integers: List[int] = field(default_factory=list)
             
-        # 初始化正确类型的数据
+        # 杂鱼♡～初始化正确类型的数据喵～
         valid_config = IntListConfig(integers=[1, 2, 3, 4, 5])
         
-        # 正常情况应该可以序列化
+        # 杂鱼♡～正常情况应该可以序列化喵～
         jsdc_dump(valid_config, self.temp_path)
         
-        # 添加错误类型的数据
+        # 杂鱼♡～添加错误类型的数据喵～
         invalid_config = IntListConfig(integers=[1, 2, "3", 4, 5])  # 添加了一个字符串
         
-        # 序列化应该抛出类型错误
+        # 杂鱼♡～序列化应该抛出类型错误喵～
         with self.assertRaises(TypeError):
             jsdc_dump(invalid_config, self.temp_path)
             
-        # 测试Dict[str, int]类型验证
+        # 杂鱼♡～测试Dict[str, int]类型验证喵～
         @dataclass
         class DictConfig:
             mapping: Dict[str, int] = field(default_factory=dict)
             
-        # 初始化正确类型的数据
+        # 杂鱼♡～初始化正确类型的数据喵～
         valid_dict_config = DictConfig(mapping={"a": 1, "b": 2, "c": 3})
         
-        # 正常情况应该可以序列化
+        # 杂鱼♡～正常情况应该可以序列化喵～
         jsdc_dump(valid_dict_config, self.temp_path)
         
-        # 添加错误类型的数据
+        # 杂鱼♡～添加错误类型的数据喵～
         invalid_dict_config = DictConfig(mapping={"a": 1, "b": "string", "c": 3})  # 值类型错误
         
-        # 序列化应该抛出类型错误
+        # 杂鱼♡～序列化应该抛出类型错误喵～
         with self.assertRaises(TypeError):
             jsdc_dump(invalid_dict_config, self.temp_path)
             
-        # 测试Dict[str, int]的键类型错误
+        # 杂鱼♡～测试Dict[str, int]的键类型错误喵～
         invalid_key_config = DictConfig()
         invalid_key_config.mapping = {1: 1, "b": 2}  # 键类型错误
         
-        # 序列化应该抛出类型错误
+        # 杂鱼♡～序列化应该抛出类型错误喵～
         with self.assertRaises(TypeError):
             jsdc_dump(invalid_key_config, self.temp_path)
             
-        # 测试嵌套容器的类型验证
+        # 杂鱼♡～测试嵌套容器的类型验证喵～
         @dataclass
         class NestedConfig:
             nested_list: List[List[int]] = field(default_factory=lambda: [[1, 2], [3, 4]])
             nested_dict: Dict[str, List[int]] = field(default_factory=lambda: {"a": [1, 2], "b": [3, 4]})
             
-        # 初始化正确类型的数据
+        # 杂鱼♡～初始化正确类型的数据喵～
         valid_nested = NestedConfig()
         
-        # 正常情况应该可以序列化
+        # 杂鱼♡～正常情况应该可以序列化喵～
         jsdc_dump(valid_nested, self.temp_path)
         
-        # 嵌套列表中添加错误类型
+        # 杂鱼♡～嵌套列表中添加错误类型喵～
         invalid_nested1 = NestedConfig()
-        invalid_nested1.nested_list[0].append("not an int")
+        invalid_nested1.nested_list[0].append("not an int")  # 杂鱼♡～添加了一个不是整数的元素喵～
         
-        # 序列化应该抛出类型错误
+        # 杂鱼♡～序列化应该抛出类型错误喵～
         with self.assertRaises(TypeError):
             jsdc_dump(invalid_nested1, self.temp_path)
             
-        # 嵌套字典中添加错误类型
+        # 杂鱼♡～嵌套字典中添加错误类型喵～
         invalid_nested2 = NestedConfig()
-        invalid_nested2.nested_dict["a"].append("not an int")
+        invalid_nested2.nested_dict["a"].append("not an int")  # 杂鱼♡～添加了一个不是整数的元素喵～
         
-        # 序列化应该抛出类型错误
+        # 杂鱼♡～序列化应该抛出类型错误喵～
         with self.assertRaises(TypeError):
             jsdc_dump(invalid_nested2, self.temp_path)
             
-        # 测试可选类型的验证
+        # 杂鱼♡～测试可选类型的验证喵～
         @dataclass
         class OptionalConfig:
             maybe_int: Optional[int] = None
             int_or_str: Union[int, str] = 42
             
-        # 初始化正确类型的数据
+        # 杂鱼♡～初始化正确类型的数据喵～
         valid_optional1 = OptionalConfig(maybe_int=None)
         valid_optional2 = OptionalConfig(maybe_int=10)
         valid_optional3 = OptionalConfig(int_or_str=99)
         valid_optional4 = OptionalConfig(int_or_str="string")
         
-        # 正常情况应该可以序列化
+        # 杂鱼♡～正常情况应该可以序列化喵～
         jsdc_dump(valid_optional1, self.temp_path)
         jsdc_dump(valid_optional2, self.temp_path)
         jsdc_dump(valid_optional3, self.temp_path)
         jsdc_dump(valid_optional4, self.temp_path)
         
-        # 使用不在Union中的类型
+        # 杂鱼♡～使用不在Union中的类型喵～
         invalid_optional = OptionalConfig()
         invalid_optional.int_or_str = [1, 2, 3]  # 列表不在Union[int, str]中
         
@@ -972,43 +949,43 @@ class TestJSDCLoader(unittest.TestCase):
         class SetConfig:
             int_set: Set[int] = field(default_factory=set)
             
-        # 初始化正确类型的数据
+        # 杂鱼♡～初始化正确类型的数据喵～
         valid_set = SetConfig(int_set={1, 2, 3, 4, 5})
         
-        # 正常情况应该可以序列化
+        # 杂鱼♡～正常情况应该可以序列化喵～
         jsdc_dump(valid_set, self.temp_path)
         
-        # 添加错误类型的数据
+        # 杂鱼♡～添加错误类型的数据喵～
         invalid_set = SetConfig()
-        invalid_set.int_set = {1, "string", 3}
+        invalid_set.int_set = {1, "string", 3}  # 杂鱼♡～添加了一个不是整数的元素喵～
         
-        # 序列化应该抛出类型错误
+        # 杂鱼♡～序列化应该抛出类型错误喵～
         with self.assertRaises(TypeError):
             jsdc_dump(invalid_set, self.temp_path)
             
-        # 测试元组类型
+        # 杂鱼♡～测试元组类型喵～
         @dataclass
         class TupleConfig:
             fixed_tuple: Tuple[int, str, bool] = field(default_factory=lambda: (1, "a", True))
             var_tuple: Tuple[int, ...] = field(default_factory=lambda: (1, 2, 3))
             
-        # 初始化正确类型的数据
+        # 杂鱼♡～初始化正确类型的数据喵～
         valid_tuple = TupleConfig()
         
-        # 正常情况应该可以序列化
+        # 杂鱼♡～正常情况应该可以序列化喵～
         jsdc_dump(valid_tuple, self.temp_path)
         
-        # 使用错误类型
-        invalid_tuple1 = TupleConfig(fixed_tuple=(1, 2, True))  # 第二个元素应该是str
+        # 杂鱼♡～使用错误类型喵～
+        invalid_tuple1 = TupleConfig(fixed_tuple=(1, 2, True))  # 杂鱼♡～第二个元素应该是str喵～
         
-        # 序列化应该抛出类型错误
+        # 杂鱼♡～序列化应该抛出类型错误喵～
         with self.assertRaises(TypeError):
             jsdc_dump(invalid_tuple1, self.temp_path)
             
-        # 可变长度元组中使用错误类型
-        invalid_tuple2 = TupleConfig(var_tuple=(1, 2, "3"))  # 应该全是int
+        # 杂鱼♡～可变长度元组中使用错误类型喵～
+        invalid_tuple2 = TupleConfig(var_tuple=(1, 2, "3"))  # 杂鱼♡～应该全是int喵～
         
-        # 序列化应该抛出类型错误
+        # 杂鱼♡～序列化应该抛出类型错误喵～
         with self.assertRaises(TypeError):
             jsdc_dump(invalid_tuple2, self.temp_path)
             
