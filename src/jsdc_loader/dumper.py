@@ -1,16 +1,18 @@
-"""杂鱼♡～这是本喵为你写的dataclass到JSON的序列化函数喵～才不是特意为了杂鱼写的呢～"""
+"""杂鱼♡～这是本喵的序列化工具喵～本喵可以把你的dataclass和Pydantic模型变成JSON喵～"""
 
 import os
 import json
 import datetime
 import uuid
 import tempfile
+from pathlib import Path
 from decimal import Decimal
-from typing import Any
+from typing import Any, Union, IO, Optional
 from dataclasses import is_dataclass
-from pydantic import BaseModel
 
-from .core import T, convert_dataclass_to_dict
+from .core.converter import convert_dataclass_to_dict
+from .core.types import T
+from .core.compat import is_pydantic_instance
 from .file_ops import ensure_directory_exists
 
 # 杂鱼♡～本喵创建了一个自定义JSON编码器，这样就可以处理各种复杂类型喵～
@@ -62,7 +64,7 @@ def jsdc_dumps(obj: T, indent: int = 4) -> str:
         if isinstance(obj, type):
             raise TypeError("杂鱼♡～obj必须是实例而不是类喵！～你真是搞不清楚呢～")
             
-        if not (is_dataclass(obj) or isinstance(obj, BaseModel)):
+        if not (is_dataclass(obj) or is_pydantic_instance(obj)):
             raise TypeError('杂鱼♡～obj必须是dataclass或Pydantic BaseModel实例喵！～')
             
         # 获取对象的类型提示
@@ -76,7 +78,7 @@ def jsdc_dumps(obj: T, indent: int = 4) -> str:
     except Exception as e:
         raise ValueError(f"杂鱼♡～序列化过程中出错喵：{str(e)}～")
 
-def jsdc_dump(obj: T, output_path: str, encoding: str = 'utf-8', indent: int = 4) -> None:
+def jsdc_dump(obj: T, output_path: Union[str, Path], encoding: str = 'utf-8', indent: int = 4) -> None:
     """杂鱼♡～本喵帮你把dataclass或Pydantic模型实例序列化成JSON文件喵～
 
     这个函数接收一个dataclass实例，并将其序列化表示写入到指定文件中，
@@ -87,7 +89,7 @@ def jsdc_dump(obj: T, output_path: str, encoding: str = 'utf-8', indent: int = 4
 
     Args:
         obj (T): 要序列化的dataclass实例喵～
-        output_path (str): 要保存JSON数据的输出文件路径喵～杂鱼可别搞错路径哦～
+        output_path (Union[str, Path]): 要保存JSON数据的输出文件路径喵～杂鱼现在可以用字符串或Path对象了♡～
         encoding (str, optional): 输出文件使用的字符编码喵～默认是'utf-8'～
         indent (int, optional): JSON输出中使用的缩进空格数喵～默认是4～看起来整齐一点～
 
@@ -97,24 +99,27 @@ def jsdc_dump(obj: T, output_path: str, encoding: str = 'utf-8', indent: int = 4
         OSError: 如果遇到文件系统相关错误，杂鱼的硬盘可能有问题喵～
         UnicodeEncodeError: 如果编码失败，杂鱼选的编码有问题喵！～
     """
-    if not output_path or not isinstance(output_path, str):
+    # 杂鱼♡～本喵现在支持Path对象了喵～
+    path = Path(output_path)
+    
+    if not path or not str(path):
         raise ValueError("杂鱼♡～输出路径无效喵！～")
     
     if indent < 0:
         raise ValueError("杂鱼♡～缩进必须是非负数喵！～负数是什么意思啦～")
 
     # 获取输出文件的绝对路径喵～
-    abs_output_path = os.path.abspath(output_path)
-    directory = os.path.dirname(abs_output_path)
+    abs_path = path.absolute()
+    directory = abs_path.parent
     
     try:
         # 确保目录存在且可写喵～
-        ensure_directory_exists(directory)
+        ensure_directory_exists(str(directory))
 
         if isinstance(obj, type):
             raise TypeError("杂鱼♡～obj必须是实例而不是类喵！～你真是搞不清楚呢～")
             
-        if not (is_dataclass(obj) or isinstance(obj, BaseModel)):
+        if not (is_dataclass(obj) or is_pydantic_instance(obj)):
             raise TypeError('杂鱼♡～obj必须是dataclass或Pydantic BaseModel实例喵！～')
             
         # 杂鱼♡～先序列化为字符串喵～
@@ -123,8 +128,8 @@ def jsdc_dump(obj: T, output_path: str, encoding: str = 'utf-8', indent: int = 4
         # 杂鱼♡～使用临时文件进行安全写入喵～
         # 在同一目录创建临时文件，确保重命名操作在同一文件系统内执行喵～
         temp_file = tempfile.NamedTemporaryFile(
-            prefix=f'.{os.path.basename(abs_output_path)}.', 
-            dir=directory, 
+            prefix=f'.{abs_path.name}.', 
+            dir=str(directory), 
             suffix='.tmp',
             delete=False,
             mode='w',
@@ -143,11 +148,11 @@ def jsdc_dump(obj: T, output_path: str, encoding: str = 'utf-8', indent: int = 4
                 
             # 杂鱼♡～使用原子操作将临时文件重命名为目标文件喵～
             # 在Windows上，如果目标文件已存在，可能会失败，所以先尝试删除喵～
-            if os.path.exists(abs_output_path):
-                os.remove(abs_output_path)
+            if abs_path.exists():
+                abs_path.unlink()
                 
             # 杂鱼♡～安全地重命名文件喵～
-            os.rename(temp_path, abs_output_path)
+            os.rename(temp_path, str(abs_path))
         except Exception as e:
             # 杂鱼♡～如果出错，清理临时文件喵～
             if os.path.exists(temp_path):

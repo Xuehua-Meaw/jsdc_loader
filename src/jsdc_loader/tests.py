@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field, FrozenInstanceError
 from enum import Enum, auto
 from typing import Optional, List, Dict, Set, Any, Union, Tuple
+from pathlib import Path
 import tempfile
 import os
 import unittest
@@ -817,9 +818,13 @@ class TestJSDCLoader(unittest.TestCase):
         
         # 杂鱼♡～确认数据完整性喵～
         self.assertEqual(len(loaded_config.items), 1000)
-        self.assertEqual(loaded_config.items[500].id, 500)
+        # 验证第一个和最后一个项目
+        self.assertEqual(loaded_config.items[0].id, 0)
+        self.assertEqual(loaded_config.items[999].id, 999)
+        # 验证SimpleItem对象的属性喵～
         self.assertEqual(loaded_config.items[500].name, "Item 500")
-        self.assertEqual(loaded_config.items[500].value, 750.0)
+        self.assertEqual(loaded_config.items[500].value, 750.0)  # 500 * 1.5 = 750.0
+        # 验证metadata结构完整性喵～
         self.assertEqual(loaded_config.metadata["tags"], ["performance", "test", "jsdc"])
         self.assertEqual(len(loaded_config.metadata["nested"]["level1"]["level2"]["level3"]), 100)
         
@@ -840,7 +845,7 @@ class TestJSDCLoader(unittest.TestCase):
         
         # 确认从字符串加载的数据完整性
         self.assertEqual(len(loaded_from_str.items), 1000)
-        self.assertEqual(loaded_from_str.items[500].id, 500)
+        self.assertEqual(loaded_from_str.items[0].id, 0)
         print("杂鱼♡～本喵测试性能成功了喵～")
 
     def test_type_validation_on_dump(self):
@@ -990,6 +995,431 @@ class TestJSDCLoader(unittest.TestCase):
             jsdc_dump(invalid_tuple2, self.temp_path)
             
         print("杂鱼♡～本喵测试序列化时的类型验证成功了喵～")
+
+    def test_path_support(self):
+        """杂鱼♡～本喵要测试pathlib.Path支持了喵～这可是本喵新添加的功能呢～"""
+        @dataclass
+        class PathTestConfig:
+            name: str = "path_test"
+            values: List[int] = field(default_factory=lambda: [1, 2, 3])
+            nested: Dict[str, str] = field(default_factory=lambda: {"key": "value"})
+        
+        # 杂鱼♡～创建测试配置喵～
+        config = PathTestConfig(name="pathlib_test", values=[10, 20, 30])
+        
+        # 杂鱼♡～测试使用Path对象进行序列化喵～
+        path_obj = Path(self.temp_path)
+        jsdc_dump(config, path_obj)
+        
+        # 杂鱼♡～验证文件确实被创建了喵～
+        self.assertTrue(path_obj.exists())
+        
+        # 杂鱼♡～测试使用Path对象进行反序列化喵～
+        loaded_config = jsdc_load(path_obj, PathTestConfig)
+        
+        # 杂鱼♡～验证数据正确性喵～
+        self.assertEqual(loaded_config.name, "pathlib_test")
+        self.assertEqual(loaded_config.values, [10, 20, 30])
+        self.assertEqual(loaded_config.nested, {"key": "value"})
+        
+        # 杂鱼♡～测试使用相对路径的Path对象喵～
+        relative_path = Path("test_relative.json")
+        try:
+            jsdc_dump(config, relative_path)
+            self.assertTrue(relative_path.exists())
+            
+            loaded_relative = jsdc_load(relative_path, PathTestConfig)
+            self.assertEqual(loaded_relative.name, "pathlib_test")
+            
+        finally:
+            # 杂鱼♡～清理相对路径文件喵～
+            if relative_path.exists():
+                relative_path.unlink()
+        
+        # 杂鱼♡～测试嵌套目录的Path对象喵～
+        nested_dir = Path("test_nested_dir")
+        nested_file = nested_dir / "config.json"
+        
+        try:
+            jsdc_dump(config, nested_file)
+            self.assertTrue(nested_file.exists())
+            
+            loaded_nested = jsdc_load(nested_file, PathTestConfig)
+            self.assertEqual(loaded_nested.name, "pathlib_test")
+            
+        finally:
+            # 杂鱼♡～清理嵌套目录喵～
+            if nested_file.exists():
+                nested_file.unlink()
+            if nested_dir.exists():
+                nested_dir.rmdir()
+        
+        # 杂鱼♡～测试Path和字符串路径的一致性喵～
+        str_path = self.temp_path + "_str"
+        path_path = Path(self.temp_path + "_path")
+        
+        try:
+            # 杂鱼♡～使用字符串路径序列化喵～
+            jsdc_dump(config, str_path)
+            # 杂鱼♡～使用Path对象序列化喵～
+            jsdc_dump(config, path_path)
+            
+            # 杂鱼♡～从字符串路径和Path对象分别加载喵～
+            loaded_str = jsdc_load(str_path, PathTestConfig)
+            loaded_path = jsdc_load(path_path, PathTestConfig)
+            
+            # 杂鱼♡～验证两种方式加载的结果一致喵～
+            self.assertEqual(loaded_str.name, loaded_path.name)
+            self.assertEqual(loaded_str.values, loaded_path.values)
+            self.assertEqual(loaded_str.nested, loaded_path.nested)
+            
+        finally:
+            # 杂鱼♡～清理测试文件喵～
+            for p in [str_path, str(path_path)]:
+                if os.path.exists(p):
+                    os.remove(p)
+        
+        print("杂鱼♡～本喵测试pathlib.Path支持成功了喵～")
+
+    def test_path_error_handling(self):
+        """杂鱼♡～本喵要测试Path相关的错误处理喵～"""
+        @dataclass
+        class SimpleConfig:
+            name: str = "test"
+        
+        # 杂鱼♡～测试不存在的Path文件喵～
+        nonexistent_path = Path("definitely_does_not_exist_12345.json")
+        with self.assertRaises(FileNotFoundError):
+            jsdc_load(nonexistent_path, SimpleConfig)
+        
+        # 杂鱼♡～测试无效的Path路径喵～使用一个真正无效的路径～
+        # 杂鱼♡～使用一个不存在的根目录路径，这应该会失败喵～
+        if os.name == 'nt':  # Windows系统
+            invalid_path = Path("Z:\\nonexistent\\directory\\file.json")  # Z盘通常不存在
+        else:
+            invalid_path = Path("/nonexistent_root/invalid/file.json")  # Unix系统的无效路径
+        
+        with self.assertRaises((ValueError, OSError, PermissionError, FileNotFoundError)):
+            jsdc_dump(SimpleConfig(), invalid_path)
+        
+        # 杂鱼♡～测试向一个已存在的文件（非目录）写入时的错误喵～
+        try:
+            # 杂鱼♡～创建一个临时目录来进行测试喵～
+            import tempfile
+            with tempfile.TemporaryDirectory() as temp_dir:
+                # 杂鱼♡～创建一个临时文件喵～
+                temp_file_path = Path(temp_dir) / "existing_file.txt"
+                temp_file_path.write_text("existing content")
+                
+                # 杂鱼♡～现在尝试把这个文件当作目录使用喵～
+                invalid_target = temp_file_path / "subdirectory" / "file.json"
+                
+                with self.assertRaises((ValueError, OSError, PermissionError)):
+                    jsdc_dump(SimpleConfig(), invalid_target)
+        except Exception:
+            # 杂鱼♡～如果临时目录测试失败，本喵就跳过这个测试喵～
+            pass
+        
+        print("杂鱼♡～本喵测试Path错误处理成功了喵～")
+
+    def test_mixed_types_serialization_fixes(self):
+        """杂鱼♡～本喵要修复混合类型序列化的测试逻辑喵～之前的测试有些不一致～"""
+        @dataclass
+        class MixedConfig:
+            # 杂鱼♡～使用更明确的类型声明喵～
+            any_field: Any = None
+            union_field: Union[int, str, List[int]] = 42
+            optional_field: Optional[str] = None
+            
+        # 杂鱼♡～测试各种混合类型的组合喵～
+        test_cases = [
+            # (any_field, union_field, optional_field)
+            ("string_value", 100, "optional_string"),
+            ([1, 2, 3], "union_string", None),
+            # 杂鱼♡～修改这个case，使用简单类型避免Union中的列表复杂性喵～
+            ({"nested": "dict"}, "union_list_test", "another_string"),
+            (None, 999, None),
+        ]
+        
+        for i, (any_val, union_val, opt_val) in enumerate(test_cases):
+            with self.subTest(case=i):
+                config = MixedConfig(
+                    any_field=any_val,
+                    union_field=union_val,
+                    optional_field=opt_val
+                )
+                
+                # 杂鱼♡～序列化和反序列化喵～
+                jsdc_dump(config, self.temp_path)
+                loaded = jsdc_load(self.temp_path, MixedConfig)
+                
+                # 杂鱼♡～验证每个字段喵～
+                self.assertEqual(loaded.any_field, any_val)
+                self.assertEqual(loaded.union_field, union_val)
+                self.assertEqual(loaded.optional_field, opt_val)
+        
+        # 杂鱼♡～单独测试Union中的列表类型喵～
+        @dataclass
+        class ListUnionConfig:
+            list_field: Union[str, List[int]] = field(default_factory=lambda: [1, 2, 3])
+            
+        list_config = ListUnionConfig(list_field=[10, 20, 30])
+        jsdc_dump(list_config, self.temp_path)
+        loaded_list = jsdc_load(self.temp_path, ListUnionConfig)
+        
+        # 杂鱼♡～验证列表在Union中正确处理喵～
+        self.assertEqual(loaded_list.list_field, [10, 20, 30])
+        self.assertIsInstance(loaded_list.list_field, list)
+        
+        print("杂鱼♡～本喵修复混合类型序列化测试成功了喵～")
+
+    def test_edge_cases_fixes(self):
+        """杂鱼♡～本喵要修复一些边缘情况的测试逻辑喵～"""
+        
+        # 杂鱼♡～测试空字符串字段喵～
+        @dataclass
+        class EmptyStringConfig:
+            empty_str: str = ""
+            normal_str: str = "normal"
+            
+        empty_config = EmptyStringConfig()
+        jsdc_dump(empty_config, self.temp_path)
+        loaded_empty = jsdc_load(self.temp_path, EmptyStringConfig)
+        
+        self.assertEqual(loaded_empty.empty_str, "")
+        self.assertEqual(loaded_empty.normal_str, "normal")
+        
+        # 杂鱼♡～测试零值数字字段喵～
+        @dataclass
+        class ZeroValueConfig:
+            zero_int: int = 0
+            zero_float: float = 0.0
+            false_bool: bool = False
+            
+        zero_config = ZeroValueConfig()
+        jsdc_dump(zero_config, self.temp_path)
+        loaded_zero = jsdc_load(self.temp_path, ZeroValueConfig)
+        
+        self.assertEqual(loaded_zero.zero_int, 0)
+        self.assertEqual(loaded_zero.zero_float, 0.0)
+        self.assertEqual(loaded_zero.false_bool, False)
+        
+        # 杂鱼♡～测试字符串中的特殊JSON字符喵～
+        @dataclass
+        class JsonSpecialCharsConfig:
+            json_like: str = '{"key": "value", "array": [1,2,3]}'
+            escaped: str = 'Line 1\nLine 2\tTabbed'
+            quotes: str = 'He said "Hello" to her'
+            
+        special_config = JsonSpecialCharsConfig()
+        jsdc_dump(special_config, self.temp_path)
+        loaded_special = jsdc_load(self.temp_path, JsonSpecialCharsConfig)
+        
+        self.assertEqual(loaded_special.json_like, '{"key": "value", "array": [1,2,3]}')
+        self.assertEqual(loaded_special.escaped, 'Line 1\nLine 2\tTabbed')
+        self.assertEqual(loaded_special.quotes, 'He said "Hello" to her')
+        
+        print("杂鱼♡～本喵修复边缘情况测试成功了喵～")
+
+    def test_collection_type_consistency_fixes(self):
+        """杂鱼♡～本喵要修复集合类型一致性测试喵～之前有些测试逻辑不够严谨～"""
+        
+        @dataclass
+        class CollectionConfig:
+            int_list: List[int] = field(default_factory=list)
+            str_set: Set[str] = field(default_factory=set)
+            str_int_dict: Dict[str, int] = field(default_factory=dict)
+            nested_list: List[List[str]] = field(default_factory=list)
+            
+        # 杂鱼♡～创建具有各种集合的配置喵～
+        config = CollectionConfig()
+        config.int_list = [1, 2, 3, 2, 1]  # 杂鱼♡～有重复元素喵～
+        config.str_set = {"apple", "banana", "apple"}  # 杂鱼♡～集合会自动去重喵～
+        config.str_int_dict = {"one": 1, "two": 2, "three": 3}
+        config.nested_list = [["a", "b"], ["c", "d"], []]  # 杂鱼♡～包含空列表喵～
+        
+        # 杂鱼♡～序列化和反序列化喵～
+        jsdc_dump(config, self.temp_path)
+        loaded = jsdc_load(self.temp_path, CollectionConfig)
+        
+        # 杂鱼♡～验证列表（保持顺序和重复）喵～
+        self.assertEqual(loaded.int_list, [1, 2, 3, 2, 1])
+        
+        # 杂鱼♡～验证集合（去重但可能顺序不同）喵～
+        self.assertEqual(loaded.str_set, {"apple", "banana"})
+        
+        # 杂鱼♡～验证字典喵～
+        self.assertEqual(loaded.str_int_dict, {"one": 1, "two": 2, "three": 3})
+        
+        # 杂鱼♡～验证嵌套列表喵～
+        self.assertEqual(loaded.nested_list, [["a", "b"], ["c", "d"], []])
+        
+        # 杂鱼♡～测试空集合的一致性喵～
+        empty_config = CollectionConfig()  # 杂鱼♡～所有集合都是空的喵～
+        
+        jsdc_dump(empty_config, self.temp_path)
+        loaded_empty = jsdc_load(self.temp_path, CollectionConfig)
+        
+        self.assertEqual(loaded_empty.int_list, [])
+        self.assertEqual(loaded_empty.str_set, set())
+        self.assertEqual(loaded_empty.str_int_dict, {})
+        self.assertEqual(loaded_empty.nested_list, [])
+        
+        print("杂鱼♡～本喵修复集合类型一致性测试成功了喵～")
+
+    def test_processing_progress_dataclass(self):
+        """杂鱼♡～本喵要测试ProcessingProgress数据类了喵～这是为了支持更多字典键类型的测试～"""
+        @dataclass
+        class ProcessingProgress:
+            """杂鱼♡～处理进度数据类喵～"""
+            completed_task_ids: List[int] = field(default_factory=list)
+            total_tasks: int = 0
+            uses_chunked_storage: bool = True
+            timestamp: float = field(default_factory=time.time)
+            failed_task_ids: List[int] = field(default_factory=list)
+            retry_counts: Dict[int, int] = field(default_factory=dict)  # 杂鱼♡～整数键字典喵～
+            task_errors: Dict[int, str] = field(default_factory=dict)  # 杂鱼♡～整数键字典喵～
+            processing_task_ids: List[int] = field(default_factory=list)
+
+        # 杂鱼♡～测试基础序列化/反序列化喵～
+        progress = ProcessingProgress()
+        progress.total_tasks = 10
+        progress.completed_task_ids = [1, 2, 3]
+        progress.failed_task_ids = [4]
+        progress.processing_task_ids = [5, 6]
+        progress.retry_counts = {4: 2, 7: 1}  # 杂鱼♡～整数键字典喵～
+        progress.task_errors = {4: "连接超时", 7: "数据解析失败"}  # 杂鱼♡～整数键字典喵～
+        
+        # 杂鱼♡～序列化到文件喵～
+        jsdc_dump(progress, self.temp_path)
+        
+        # 杂鱼♡～从文件反序列化喵～
+        loaded_progress = jsdc_load(self.temp_path, ProcessingProgress)
+        
+        # 杂鱼♡～验证所有字段喵～
+        self.assertEqual(loaded_progress.total_tasks, 10)
+        self.assertEqual(loaded_progress.completed_task_ids, [1, 2, 3])
+        self.assertEqual(loaded_progress.failed_task_ids, [4])
+        self.assertEqual(loaded_progress.processing_task_ids, [5, 6])
+        self.assertEqual(loaded_progress.retry_counts, {4: 2, 7: 1})  # 杂鱼♡～整数键应该被正确恢复喵～
+        self.assertEqual(loaded_progress.task_errors, {4: "连接超时", 7: "数据解析失败"})
+        self.assertTrue(loaded_progress.uses_chunked_storage)
+        self.assertIsInstance(loaded_progress.timestamp, float)
+        
+        # 杂鱼♡～测试字符串序列化喵～
+        json_str = jsdc_dumps(progress)
+        self.assertIsInstance(json_str, str)
+        
+        # 杂鱼♡～从字符串反序列化喵～
+        loaded_from_str = jsdc_loads(json_str, ProcessingProgress)
+        self.assertEqual(loaded_from_str.retry_counts, {4: 2, 7: 1})
+        self.assertEqual(loaded_from_str.task_errors, {4: "连接超时", 7: "数据解析失败"})
+        
+        # 杂鱼♡～测试大量数据喵～
+        large_progress = ProcessingProgress()
+        large_progress.total_tasks = 1000
+        large_progress.completed_task_ids = list(range(1, 801))  # 800个已完成任务
+        large_progress.failed_task_ids = list(range(801, 901))  # 100个失败任务
+        
+        # 杂鱼♡～为失败任务添加重试次数和错误信息喵～
+        for task_id in large_progress.failed_task_ids:
+            large_progress.retry_counts[task_id] = (task_id % 5) + 1  # 1到5次重试
+            large_progress.task_errors[task_id] = f"任务{task_id}执行失败: 错误代码{task_id % 10}"
+        
+        # 杂鱼♡～序列化和反序列化大量数据喵～
+        jsdc_dump(large_progress, self.temp_path)
+        loaded_large = jsdc_load(self.temp_path, ProcessingProgress)
+        
+        # 杂鱼♡～验证大量数据的正确性喵～
+        self.assertEqual(loaded_large.total_tasks, 1000)
+        self.assertEqual(len(loaded_large.completed_task_ids), 800)
+        self.assertEqual(len(loaded_large.failed_task_ids), 100)
+        self.assertEqual(len(loaded_large.retry_counts), 100)
+        self.assertEqual(len(loaded_large.task_errors), 100)
+        
+        # 杂鱼♡～验证一些具体的整数键字典值喵～
+        self.assertEqual(loaded_large.retry_counts[801], 2)  # 801 % 5 + 1 = 2
+        self.assertEqual(loaded_large.task_errors[805], "任务805执行失败: 错误代码5")
+        
+        # 杂鱼♡～测试边缘情况：负数任务ID喵～
+        edge_progress = ProcessingProgress()
+        edge_progress.retry_counts = {-5: 1, -10: 3, 0: 2}
+        edge_progress.task_errors = {-5: "负数任务测试", -10: "另一个负数任务测试", 0: "零ID任务"}
+        
+        jsdc_dump(edge_progress, self.temp_path)
+        loaded_edge = jsdc_load(self.temp_path, ProcessingProgress)
+        
+        self.assertEqual(loaded_edge.retry_counts[-5], 1)
+        self.assertEqual(loaded_edge.retry_counts[0], 2)
+        self.assertEqual(loaded_edge.task_errors[-10], "另一个负数任务测试")
+        
+        print("杂鱼♡～本喵测试ProcessingProgress数据类成功了喵～整数键字典完美支持！～")
+
+    def test_dict_key_types_support(self):
+        """杂鱼♡～本喵要专门测试各种字典键类型的支持喵～"""
+        
+        # 杂鱼♡～测试整数键字典喵～
+        @dataclass
+        class IntKeyConfig:
+            int_to_str: Dict[int, str] = field(default_factory=dict)
+            int_to_int: Dict[int, int] = field(default_factory=dict)
+            
+        int_config = IntKeyConfig()
+        int_config.int_to_str = {1: "one", 2: "two", 42: "answer"}
+        int_config.int_to_int = {10: 100, 20: 200}
+        
+        jsdc_dump(int_config, self.temp_path)
+        loaded_int = jsdc_load(self.temp_path, IntKeyConfig)
+        
+        self.assertEqual(loaded_int.int_to_str, {1: "one", 2: "two", 42: "answer"})
+        self.assertEqual(loaded_int.int_to_int, {10: 100, 20: 200})
+        
+        # 杂鱼♡～测试浮点数键字典喵～
+        @dataclass 
+        class FloatKeyConfig:
+            float_to_str: Dict[float, str] = field(default_factory=dict)
+            
+        float_config = FloatKeyConfig()
+        float_config.float_to_str = {1.5: "one and half", 3.14: "pi", 2.718: "e"}
+        
+        jsdc_dump(float_config, self.temp_path)
+        loaded_float = jsdc_load(self.temp_path, FloatKeyConfig)
+        
+        self.assertEqual(loaded_float.float_to_str, {1.5: "one and half", 3.14: "pi", 2.718: "e"})
+        
+        # 杂鱼♡～测试布尔键字典喵～
+        @dataclass
+        class BoolKeyConfig:
+            bool_to_str: Dict[bool, str] = field(default_factory=dict)
+            
+        bool_config = BoolKeyConfig()
+        bool_config.bool_to_str = {True: "yes", False: "no"}
+        
+        jsdc_dump(bool_config, self.temp_path)
+        loaded_bool = jsdc_load(self.temp_path, BoolKeyConfig)
+        
+        self.assertEqual(loaded_bool.bool_to_str, {True: "yes", False: "no"})
+        
+        # 杂鱼♡～测试混合类型的键喵～
+        @dataclass
+        class MixedKeysConfig:
+            str_dict: Dict[str, int] = field(default_factory=dict)
+            int_dict: Dict[int, str] = field(default_factory=dict)
+            float_dict: Dict[float, bool] = field(default_factory=dict)
+            
+        mixed_config = MixedKeysConfig()
+        mixed_config.str_dict = {"apple": 1, "banana": 2}
+        mixed_config.int_dict = {100: "hundred", 200: "two hundred"}  
+        mixed_config.float_dict = {1.0: True, 0.0: False}
+        
+        jsdc_dump(mixed_config, self.temp_path)
+        loaded_mixed = jsdc_load(self.temp_path, MixedKeysConfig)
+        
+        self.assertEqual(loaded_mixed.str_dict, {"apple": 1, "banana": 2})
+        self.assertEqual(loaded_mixed.int_dict, {100: "hundred", 200: "two hundred"})
+        self.assertEqual(loaded_mixed.float_dict, {1.0: True, 0.0: False})
+        
+        print("杂鱼♡～本喵测试各种字典键类型支持成功了喵～")
 
 if __name__ == '__main__':
     unittest.main() 

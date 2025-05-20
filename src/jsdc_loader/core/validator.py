@@ -3,9 +3,9 @@
 from typing import Any, get_args, get_origin, Union, Type, Dict, List, Set, Tuple
 from dataclasses import is_dataclass
 from enum import Enum
-from pydantic import BaseModel
 
 from .types import _TYPE_HINTS_CACHE
+from .compat import is_pydantic_model
 
 def get_cached_type_hints(cls: Type) -> Dict[str, Any]:
     """杂鱼♡～本喵用缓存来获取类型提示，这样速度更快喵～"""
@@ -18,7 +18,7 @@ def validate_dataclass(cls: Any) -> None:
     """杂鱼♡～本喵帮你验证提供的类是否为dataclass或BaseModel喵～杂鱼总是分不清这些～"""
     if not cls:
         raise TypeError("杂鱼♡～data_class不能为None喵！～")
-    if not (is_dataclass(cls) or issubclass(cls, BaseModel)):
+    if not (is_dataclass(cls) or is_pydantic_model(cls)):
         raise TypeError('杂鱼♡～data_class必须是dataclass或Pydantic BaseModel喵！～')
 
 def validate_type(key: str, value: Any, e_type: Any) -> None:
