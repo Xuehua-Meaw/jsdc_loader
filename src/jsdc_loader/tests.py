@@ -911,8 +911,8 @@ class TestJSDCLoader(unittest.TestCase):
         # 杂鱼♡～记录性能指标（可以在测试输出中查看喵）～
         print("\n杂鱼♡～性能测试结果喵～")
         print(f"文件大小: {file_size} 字节喵～")
-        print(f"序列化时间: {serialize_time:.6f} 秒喵～")
-        print(f"反序列化时间: {deserialize_time:.6f} 秒喵～")
+        print(f"序列化时间 (raw): {serialize_time:.6f} 秒喵～")
+        print(f"反序列化时间 (raw): {deserialize_time:.6f} 秒喵～")
         print(f"项目数量: {len(loaded_config.items)} 个喵～")
 
         # 杂鱼♡～确认数据完整性喵～
@@ -942,9 +942,30 @@ class TestJSDCLoader(unittest.TestCase):
         string_deserialize_time = time.time() - start_time
 
         # 记录额外的性能指标
-        print(f"String Serialization Time: {string_serialize_time:.6f} seconds")
-        print(f"String Deserialization Time: {string_deserialize_time:.6f} seconds")
+        print(f"String Serialization Time (raw): {string_serialize_time:.6f} seconds")
+        print(f"String Deserialization Time (raw): {string_deserialize_time:.6f} seconds")
         print(f"JSON String Length: {len(json_str)} characters")
+
+        # 杂鱼♡～本喵要开始分析性能了喵～
+        import cProfile
+        import pstats
+
+        # 分析 jsdc_dump (间接调用 convert_dataclass_to_dict)
+        profiler_dump = cProfile.Profile()
+        profiler_dump.enable()
+        jsdc_dump(large_config, self.temp_path)
+        profiler_dump.disable()
+        profiler_dump.dump_stats("dump_stats.prof")
+
+        # 分析 jsdc_load (间接调用 convert_value)
+        profiler_load = cProfile.Profile()
+        profiler_load.enable()
+        jsdc_load(self.temp_path, PerformanceConfig)
+        profiler_load.disable()
+        profiler_load.dump_stats("load_stats.prof")
+
+        print("\n杂鱼♡～cProfile 统计信息已保存到 dump_stats.prof 和 load_stats.prof 喵～")
+        # 杂鱼♡～本喵会在下一个回合读取和分析这些文件喵～
 
         # 确认从字符串加载的数据完整性
         self.assertEqual(len(loaded_from_str.items), 1000)
@@ -1568,6 +1589,237 @@ class TestJSDCLoader(unittest.TestCase):
         self.assertEqual(loaded_mixed.float_dict, {1.0: True, 0.0: False})
 
         print("杂鱼♡～本喵测试各种字典键类型支持成功了喵～")
+
+    def test_validate_mutated_instance_on_dump(self):
+        """杂鱼♡～本喵要测试序列化时，对已实例化且字段被错误修改的对象的类型验证喵～"""
+
+        @dataclass
+        class SimpleDataclass:
+            value: int
+            name: str = "test"
+
+        @dataclass
+        class NestedDataclass:
+            inner: SimpleDataclass
+            description: str = "nested_test"
+
+        # Test case 1: Simple dataclass with mutated field
+        dc_instance = SimpleDataclass(value=100)
+        # Mutate the field to an incorrect type
+        # Casting to Any to bypass potential static type checker warnings in some IDEs for tests
+        setattr(dc_instance, 'value', "this_is_not_an_int")
+
+        # The key in the error message from jsdc_dump is 'root.value'
+        with self.assertRaisesRegex(TypeError, r"root\.value.*期望.*int.*得到.*str"):
+             jsdc_dump(dc_instance, self.temp_path)
+
+        # Test case 2: Nested dataclass with mutated field in the inner object
+        nested_instance = NestedDataclass(inner=SimpleDataclass(value=200))
+        # Mutate the field of the inner dataclass instance
+        setattr(nested_instance.inner, 'value', "wrong_type_again")
+
+        # The key in the error message from jsdc_dump is 'root.inner.value'
+        with self.assertRaisesRegex(TypeError, r"root\.inner\.value.*期望.*int.*得到.*str"):
+            jsdc_dump(nested_instance, self.temp_path)
+
+        print("杂鱼♡～本喵测试对已突变实例的序列化时类型验证成功了喵～（Dataclass）～")
+
+        if HAS_PYDANTIC:
+            class SimplePydantic(BaseModel):
+                value: int
+                name: str = "pydantic_test"
+
+                if hasattr(BaseModel, 'model_config'): # Pydantic V2
+                    model_config = {'validate_assignment': True}
+                else: # Pydantic V1
+                    class Config:
+                        validate_assignment = True
+
+            @dataclass # Using dataclass to wrap pydantic model for one level of nesting via getattr
+            class NestedPydanticContainer:
+                inner_pyd: SimplePydantic
+                description: str = "nested_pydantic_test"
+
+
+            # Test case 3: Simple Pydantic model
+            # Pydantic with validate_assignment=True will raise error on assignment.
+            # If assignment is not validated, our dumper should catch it.
+            try:
+                pyd_instance = SimplePydantic(value=300)
+                # This assignment should ideally raise Pydantic's ValidationError if validate_assignment=True
+                try:
+                    setattr(pyd_instance, 'value', "not_an_int_for_pydantic")
+                except Exception as e: # Catch direct assignment error if Pydantic is strict
+                    if "ValidationError" in str(type(e)):
+                         raise # Re-raise if it's Pydantic's validation error, this means test setup is fighting Pydantic
+                    # Otherwise, if it's some other attribute error, let it fail the test.
+
+                # If Pydantic didn't raise on assignment (e.g. validate_assignment=False or not configured,
+                # or type is Any which then our validator checks)
+                # then our dump should catch it. The key here would be 'root.value'
+                with self.assertRaisesRegex(TypeError, r"root\.value.*期望.*int.*得到.*str"):
+                    jsdc_dump(pyd_instance, self.temp_path)
+
+            except Exception as pyd_e: # Catch Pydantic's validation error on assignment (if not caught above)
+                self.assertTrue("ValidationError" in str(type(pyd_e)),
+                                f"Expected Pydantic ValidationError or dump TypeError, got {type(pyd_e)} during assignment or dump.")
+                print(f"杂鱼♡～Pydantic 在赋值时就正确捕获了类型错误喵: {pyd_e}～")
+
+
+            # Test case 4: Nested Pydantic model
+            try:
+                nested_pyd_container = NestedPydanticContainer(inner_pyd=SimplePydantic(value=400))
+                try:
+                    setattr(nested_pyd_container.inner_pyd, 'value', "bad_type_for_nested_pyd")
+                except Exception as e_nested_assign:
+                    if "ValidationError" in str(type(e_nested_assign)):
+                        raise
+
+                # The key here would be 'root.inner_pyd.value'
+                with self.assertRaisesRegex(TypeError, r"root\.inner_pyd\.value.*期望.*int.*得到.*str"):
+                    jsdc_dump(nested_pyd_container, self.temp_path)
+
+            except Exception as pyd_e_nested:
+                 self.assertTrue("ValidationError" in str(type(pyd_e_nested)),
+                                f"Expected Pydantic ValidationError or dump TypeError for nested model, got {type(pyd_e_nested)}")
+                 print(f"杂鱼♡～Pydantic (嵌套) 在赋值时就正确捕获了类型错误喵: {pyd_e_nested}～")
+
+            print("杂鱼♡～本喵测试对已突变实例的序列化时类型验证成功了喵～（Pydantic）～")
+
+    def test_comprehensive_performance(self):
+        """杂鱼♡～本喵要进行一次更全面的性能测试了喵～包含各种复杂结构和大量数据喵～"""
+        print("\n\n杂鱼♡～开始全面性能测试喵～")
+
+        # --- Data Definitions ---
+        @dataclass
+        class PerfItemDetail:
+            detail_id: uuid.UUID
+            value: Decimal
+            description: str
+            metadata: Dict[str, Any]
+            tags: List[str]
+
+        @dataclass
+        class PerfMainItem:
+            item_id: int
+            name: str
+            created_at: datetime.datetime
+            is_active: bool
+            details: List[PerfItemDetail]
+            optional_detail: Optional[PerfItemDetail] = None
+            sub_items_dict: Dict[str, PerfItemDetail] = field(default_factory=dict)
+
+        @dataclass
+        class PerfConfig:
+            config_id: str
+            version: int
+            main_items: List[PerfMainItem]
+            aux_data: Dict[uuid.UUID, PerfMainItem]
+
+        # --- Data Generation ---
+        def generate_perf_item_detail(idx: int) -> PerfItemDetail:
+            return PerfItemDetail(
+                detail_id=uuid.uuid4(),
+                value=Decimal(f"{idx}.{idx % 100:02d}"),
+                description=f"Detail description for item {idx}, with some extra text to make it longer. UUID: {uuid.uuid4()}",
+                metadata={f"meta_key_{j}": f"meta_value_{j}_{uuid.uuid4().hex[:4]}" for j in range(5)},
+                tags=[f"tag_{k}" for k in range(10)]
+            )
+
+        def generate_perf_main_item(idx: int, num_details: int, num_dict_entries: int) -> PerfMainItem:
+            details = [generate_perf_item_detail(j) for j in range(num_details)]
+            sub_items_dict = {f"sub_item_{k}": generate_perf_item_detail(k + 1000) for k in range(num_dict_entries)}
+            return PerfMainItem(
+                item_id=idx,
+                name=f"Main Item {idx} - {uuid.uuid4().hex[:8]}",
+                created_at=datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=idx),
+                is_active=bool(idx % 2),
+                details=details,
+                optional_detail=generate_perf_item_detail(idx + 2000) if idx % 3 == 0 else None,
+                sub_items_dict=sub_items_dict
+            )
+
+        NUM_CONFIGS = 5
+        NUM_MAIN_ITEMS_PER_CONFIG = 50 # Total main items: NUM_CONFIGS * NUM_MAIN_ITEMS_PER_CONFIG
+        NUM_DETAILS_PER_MAIN_ITEM = 3
+        NUM_DICT_ENTRIES_PER_MAIN_ITEM = 2
+
+        print(f"杂鱼♡～准备生成测试数据喵：{NUM_CONFIGS} PerfConfig 对象，每个包含 {NUM_MAIN_ITEMS_PER_CONFIG} PerfMainItem 对象...")
+
+        all_configs: List[PerfConfig] = []
+        for i in range(NUM_CONFIGS):
+            main_items = [
+                generate_perf_main_item(j, NUM_DETAILS_PER_MAIN_ITEM, NUM_DICT_ENTRIES_PER_MAIN_ITEM)
+                for j in range(NUM_MAIN_ITEMS_PER_CONFIG)
+            ]
+            aux_data = {
+                uuid.uuid4(): generate_perf_main_item(k + 5000, 1, 1)
+                for k, item in enumerate(main_items[:10]) # Aux data with 10 items
+            }
+            config = PerfConfig(
+                config_id=f"config_{i}_{uuid.uuid4().hex}",
+                version=i + 1,
+                main_items=main_items,
+                aux_data=aux_data
+            )
+            all_configs.append(config)
+
+        total_main_items = NUM_CONFIGS * NUM_MAIN_ITEMS_PER_CONFIG
+        total_detail_items = total_main_items * (NUM_DETAILS_PER_MAIN_ITEM + NUM_DICT_ENTRIES_PER_MAIN_ITEM) # Rough estimate
+        print(f"杂鱼♡～测试数据生成完毕喵！总共约 {total_main_items} MainItems 和 {total_detail_items} DetailItems。")
+
+        # --- Benchmarking Functions ---
+        def benchmark_operation(operation_name: str, func, data, target_class=None):
+            start_time = time.perf_counter()
+            if target_class:
+                result = func(data, target_class)
+            else:
+                result = func(data)
+            end_time = time.perf_counter()
+            duration = end_time - start_time
+            print(f"  {operation_name}: {duration:.6f} 秒喵～")
+            return result, duration
+
+        # --- Serialization to String (jsdc_dumps) ---
+        print("\n--- jsdc_dumps (到字符串) ---")
+        # Using indent=None for compact JSON, potentially faster for large data
+        # The dumper was fixed to handle indent=None
+        serialized_str, dumps_time = benchmark_operation("jsdc_dumps (List[PerfConfig])",
+                                                         lambda d: jsdc_dumps(d, indent=None),
+                                                         all_configs)
+        print(f"  序列化后的字符串长度: {len(serialized_str)} 字节喵～")
+
+        # --- Deserialization from String (jsdc_loads) ---
+        print("\n--- jsdc_loads (从字符串) ---")
+        _, loads_time = benchmark_operation("jsdc_loads (List[PerfConfig])",
+                                            jsdc_loads,
+                                            serialized_str,
+                                            List[PerfConfig])
+
+        # --- Serialization to File (jsdc_dump) ---
+        print("\n--- jsdc_dump (到文件) ---")
+        # Using indent=None for compact JSON
+        dump_file_path = Path(self.temp_path + "_comprehensive.json")
+        start_time = time.perf_counter()
+        jsdc_dump(all_configs, dump_file_path, indent=None)
+        end_time = time.perf_counter()
+        dump_time = end_time - start_time
+        print(f"  jsdc_dump (List[PerfConfig]): {dump_time:.6f} 秒喵～")
+
+        file_size = dump_file_path.stat().st_size
+        print(f"  序列化后的文件大小: {file_size / 1024 / 1024:.2f} MB ({file_size} 字节) 喵～")
+
+        # --- Deserialization from File (jsdc_load) ---
+        print("\n--- jsdc_load (从文件) ---")
+        _, load_time = benchmark_operation("jsdc_load (List[PerfConfig])",
+                                           jsdc_load,
+                                           dump_file_path,
+                                           List[PerfConfig])
+
+        if dump_file_path.exists():
+            dump_file_path.unlink()
+
+        print("\n杂鱼♡～全面性能测试结束了喵～")
 
 
 if __name__ == "__main__":

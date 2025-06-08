@@ -6,6 +6,8 @@ from typing import Any, Dict, Type, TypeVar, Union
 # 杂鱼♡～本喵用这个缓存类型提示，这样就不用重复查找了喵～
 # 本喵可是很注重性能的哦～不像某些杂鱼～
 _TYPE_HINTS_CACHE: Dict[Type, Dict[str, Any]] = {}
+_GET_ORIGIN_CACHE: Dict[Any, Any] = {}
+_GET_ARGS_CACHE: Dict[Any, Any] = {}
 
 # 杂鱼♡～本喵静态定义类型约束，支持可选的 pydantic 喵～
 try:
