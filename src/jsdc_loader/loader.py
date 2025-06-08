@@ -9,7 +9,10 @@ from .file_ops import check_file_size
 
 
 def jsdc_load(
-    file_path: Union[str, Path], target_class: Type[T], encoding: str = "utf-8", max_file_size: Optional[int] = None
+    file_path: Union[str, Path],
+    target_class: Type[T],
+    encoding: str = "utf-8",
+    max_file_size: Optional[int] = None,
 ) -> T:
     """杂鱼♡～本喵帮你从JSON文件加载数据并转换为指定的dataclass或Pydantic模型喵～
 
@@ -53,7 +56,9 @@ def jsdc_load(
     except json.JSONDecodeError as e:
         raise ValueError(f"杂鱼♡～无效的JSON喵：{str(e)}～")
     except UnicodeDecodeError as e:
-        raise ValueError(f"杂鱼♡～用{encoding}解码失败喵：{str(e)}～杂鱼是不是编码搞错了？～")
+        raise ValueError(
+            f"杂鱼♡～用{encoding}解码失败喵：{str(e)}～杂鱼是不是编码搞错了？～"
+        )
     except Exception as e:
         raise ValueError(f"杂鱼♡～加载或转换过程中出错喵：{str(e)}～")
 

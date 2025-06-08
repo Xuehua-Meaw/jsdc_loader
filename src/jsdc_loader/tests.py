@@ -120,7 +120,9 @@ class TestJSDCLoader(unittest.TestCase):
         loaded_app = jsdc_load(self.temp_path, AppConfig)
 
         self.assertEqual(loaded_app.user.roles, ["read", "write"])
-        self.assertEqual(loaded_app.database.ips, ["127.0.0.1", "192.168.1.1", "10.0.0.1"])
+        self.assertEqual(
+            loaded_app.database.ips, ["127.0.0.1", "192.168.1.1", "10.0.0.1"]
+        )
         self.assertEqual(loaded_app.settings, {"theme": "dark", "language": "en"})
         print("杂鱼♡～本喵测试嵌套的数据类成功了喵～")
 
@@ -161,21 +163,33 @@ class TestJSDCLoader(unittest.TestCase):
             model: str = ""
 
             def __hash__(self):
-                return hash((self.base_url, self.api_key, self.model))  # 使用元组的哈希值
+                return hash(
+                    (self.base_url, self.api_key, self.model)
+                )  # 使用元组的哈希值
 
             def __eq__(self, other):
                 if not isinstance(other, Model):
                     return NotImplemented
-                return (self.base_url, self.api_key, self.model) == (other.base_url, other.api_key, other.model)  # 比较内容
+                return (self.base_url, self.api_key, self.model) == (
+                    other.base_url,
+                    other.api_key,
+                    other.model,
+                )  # 比较内容
 
         @dataclass
         class ModelList:
             models: Set[Model] = field(default_factory=lambda: set())
 
         # 创建测试数据
-        model1 = Model(base_url="https://api1.example.com", api_key="key1", model="gpt-4")
-        model2 = Model(base_url="https://api2.example.com", api_key="key2", model="gpt-3.5")
-        model3 = Model(base_url="https://api3.example.com", api_key="key3", model="llama-3")
+        model1 = Model(
+            base_url="https://api1.example.com", api_key="key1", model="gpt-4"
+        )
+        model2 = Model(
+            base_url="https://api2.example.com", api_key="key2", model="gpt-3.5"
+        )
+        model3 = Model(
+            base_url="https://api3.example.com", api_key="key3", model="llama-3"
+        )
 
         model_list = ModelList()
         model_list.models.add(model1)
@@ -183,7 +197,9 @@ class TestJSDCLoader(unittest.TestCase):
         model_list.models.add(model3)
 
         # 测试相同模型的哈希值和相等性
-        duplicate_model = Model(base_url="https://api1.example.com", api_key="key1", model="gpt-4")
+        duplicate_model = Model(
+            base_url="https://api1.example.com", api_key="key1", model="gpt-4"
+        )
         model_list.models.add(duplicate_model)  # 这个不应该增加集合的大小
 
         self.assertEqual(len(model_list.models), 3)  # 验证重复模型没有被添加
@@ -207,12 +223,16 @@ class TestJSDCLoader(unittest.TestCase):
             self.assertEqual(loaded_models[i].model, original_models[i].model)
 
         # 验证集合操作仍然正常工作
-        new_model = Model(base_url="https://api4.example.com", api_key="key4", model="claude-3")
+        new_model = Model(
+            base_url="https://api4.example.com", api_key="key4", model="claude-3"
+        )
         loaded_model_list.models.add(new_model)
         self.assertEqual(len(loaded_model_list.models), 4)
 
         # 验证重复模型仍然不会被添加
-        duplicate_model_again = Model(base_url="https://api1.example.com", api_key="key1", model="gpt-4")
+        duplicate_model_again = Model(
+            base_url="https://api1.example.com", api_key="key1", model="gpt-4"
+        )
         loaded_model_list.models.add(duplicate_model_again)
         self.assertEqual(len(loaded_model_list.models), 4)
         print("杂鱼♡～本喵测试可哈希的模型成功了喵～")
@@ -247,9 +267,13 @@ class TestJSDCLoader(unittest.TestCase):
 
         @dataclass
         class ComplexConfig:
-            created_at: datetime.datetime = field(default_factory=lambda: datetime.datetime.now())
+            created_at: datetime.datetime = field(
+                default_factory=lambda: datetime.datetime.now()
+            )
             updated_at: Optional[datetime.datetime] = None
-            expiry_date: Optional[datetime.date] = field(default_factory=lambda: datetime.date.today())
+            expiry_date: Optional[datetime.date] = field(
+                default_factory=lambda: datetime.date.today()
+            )
             session_id: uuid.UUID = field(default_factory=lambda: uuid.uuid4())
             amount: Decimal = Decimal("10.50")
             time_delta: datetime.timedelta = datetime.timedelta(days=7)
@@ -281,34 +305,47 @@ class TestJSDCLoader(unittest.TestCase):
             name: str = "level2"
             value: int = 2
             level3_items: List[Level3] = field(default_factory=lambda: [Level3()])
-            level3_dict: Dict[str, Level3] = field(default_factory=lambda: {"default": Level3()})
+            level3_dict: Dict[str, Level3] = field(
+                default_factory=lambda: {"default": Level3()}
+            )
 
         @dataclass
         class Level1:
             name: str = "level1"
             value: int = 1
             level2_items: List[Level2] = field(default_factory=lambda: [Level2()])
-            level2_dict: Dict[str, Level2] = field(default_factory=lambda: {"default": Level2()})
+            level2_dict: Dict[str, Level2] = field(
+                default_factory=lambda: {"default": Level2()}
+            )
 
         @dataclass
         class RootConfig:
             name: str = "root"
             level1_items: List[Level1] = field(default_factory=lambda: [Level1()])
-            level1_dict: Dict[str, Level1] = field(default_factory=lambda: {"default": Level1()})
+            level1_dict: Dict[str, Level1] = field(
+                default_factory=lambda: {"default": Level1()}
+            )
 
         # 创建深度嵌套结构
         root = RootConfig()
         root.level1_items.append(Level1(name="custom_level1"))
         root.level1_dict["custom"] = Level1(name="custom_dict_level1")
         root.level1_dict["custom"].level2_items.append(Level2(name="custom_level2"))
-        root.level1_dict["custom"].level2_items[0].level3_items.append(Level3(name="custom_level3", value=99))
+        root.level1_dict["custom"].level2_items[0].level3_items.append(
+            Level3(name="custom_level3", value=99)
+        )
 
         jsdc_dump(root, self.temp_path)
         loaded_root = jsdc_load(self.temp_path, RootConfig)
 
         # 验证深度嵌套的值
-        self.assertEqual(loaded_root.level1_dict["custom"].level2_items[0].level3_items[1].name, "custom_level3")
-        self.assertEqual(loaded_root.level1_dict["custom"].level2_items[0].level3_items[1].value, 99)
+        self.assertEqual(
+            loaded_root.level1_dict["custom"].level2_items[0].level3_items[1].name,
+            "custom_level3",
+        )
+        self.assertEqual(
+            loaded_root.level1_dict["custom"].level2_items[0].level3_items[1].value, 99
+        )
         print("杂鱼♡～本喵测试超级深的嵌套结构成功了喵～")
 
     def test_string_serialization(self):
@@ -396,7 +433,9 @@ class TestJSDCLoader(unittest.TestCase):
         @dataclass
         class ConfigWithUnions:
             int_or_str: Union[int, str] = 42
-            dict_or_list: Union[Dict[str, int], List[int]] = field(default_factory=lambda: {"a": 1})
+            dict_or_list: Union[Dict[str, int], List[int]] = field(
+                default_factory=lambda: {"a": 1}
+            )
 
         # 测试不同的联合类型值
         config1 = ConfigWithUnions(int_or_str=42, dict_or_list={"a": 1, "b": 2})
@@ -422,10 +461,14 @@ class TestJSDCLoader(unittest.TestCase):
 
         @dataclass
         class ConfigWithTuples:
-            simple_tuple: Tuple[int, str, bool] = field(default_factory=lambda: (1, "test", True))
+            simple_tuple: Tuple[int, str, bool] = field(
+                default_factory=lambda: (1, "test", True)
+            )
             int_tuple: Tuple[int, ...] = field(default_factory=lambda: (1, 2, 3))
             empty_tuple: Tuple = field(default_factory=tuple)
-            nested_tuple: Tuple[Tuple[int, int], Tuple[str, str]] = field(default_factory=lambda: ((1, 2), ("a", "b")))
+            nested_tuple: Tuple[Tuple[int, int], Tuple[str, str]] = field(
+                default_factory=lambda: ((1, 2), ("a", "b"))
+            )
 
         config = ConfigWithTuples()
 
@@ -451,15 +494,30 @@ class TestJSDCLoader(unittest.TestCase):
         config = ConfigWithAny()
         config.any_field = "string"
         config.any_list = [1, "two", False, None, [1, 2, 3], {"key": "value"}]
-        config.any_dict = {"int": 42, "bool": True, "none": None, "list": [1, 2, 3], "dict": {"nested": "value"}}
+        config.any_dict = {
+            "int": 42,
+            "bool": True,
+            "none": None,
+            "list": [1, 2, 3],
+            "dict": {"nested": "value"},
+        }
 
         jsdc_dump(config, self.temp_path)
         loaded_config = jsdc_load(self.temp_path, ConfigWithAny)
 
         self.assertEqual(loaded_config.any_field, "string")
-        self.assertEqual(loaded_config.any_list, [1, "two", False, None, [1, 2, 3], {"key": "value"}])
         self.assertEqual(
-            loaded_config.any_dict, {"int": 42, "bool": True, "none": None, "list": [1, 2, 3], "dict": {"nested": "value"}}
+            loaded_config.any_list, [1, "two", False, None, [1, 2, 3], {"key": "value"}]
+        )
+        self.assertEqual(
+            loaded_config.any_dict,
+            {
+                "int": 42,
+                "bool": True,
+                "none": None,
+                "list": [1, 2, 3],
+                "dict": {"nested": "value"},
+            },
         )
         print("杂鱼♡～本喵测试Any类型成功了喵～")
 
@@ -477,7 +535,9 @@ class TestJSDCLoader(unittest.TestCase):
                 "id": i,
                 "name": f"Item {i}",
                 "tags": [f"tag{j}" for j in range(10)],  # 每个项目10个标签
-                "properties": {f"prop{k}": f"value{k}" for k in range(5)},  # 每个项目5个属性
+                "properties": {
+                    f"prop{k}": f"value{k}" for k in range(5)
+                },  # 每个项目5个属性
             }
             large_config.items.append(item)
 
@@ -589,8 +649,12 @@ class TestJSDCLoader(unittest.TestCase):
         self.assertEqual(partial_config.required_str, "")  # 杂鱼♡～默认值喵～
         self.assertEqual(partial_config.optional_int, 99)  # 杂鱼♡～自定义值喵～
         self.assertEqual(partial_config.optional_str, "default")  # 杂鱼♡～默认值喵～
-        self.assertEqual(partial_config.optional_list, ["custom_item"])  # 杂鱼♡～自定义值喵～
-        self.assertEqual(partial_config.optional_dict, {"default_key": 1})  # 杂鱼♡～默认值喵～
+        self.assertEqual(
+            partial_config.optional_list, ["custom_item"]
+        )  # 杂鱼♡～自定义值喵～
+        self.assertEqual(
+            partial_config.optional_dict, {"default_key": 1}
+        )  # 杂鱼♡～默认值喵～
         print("杂鱼♡～本喵测试默认值处理成功了喵～")
 
     def test_complex_union_types(self):
@@ -653,10 +717,16 @@ class TestJSDCLoader(unittest.TestCase):
         class CustomContainersConfig:
             # 杂鱼♡～将类型声明为普通dict，但初始化时使用特殊容器喵～
             ordered_dict: Dict[str, int] = field(
-                default_factory=lambda: collections.OrderedDict([("a", 1), ("b", 2), ("c", 3)])
+                default_factory=lambda: collections.OrderedDict(
+                    [("a", 1), ("b", 2), ("c", 3)]
+                )
             )
-            default_dict: Dict[str, int] = field(default_factory=lambda: collections.defaultdict(int, {"x": 10, "y": 20}))
-            counter: Dict[str, int] = field(default_factory=lambda: collections.Counter(["a", "b", "a", "c", "a"]))
+            default_dict: Dict[str, int] = field(
+                default_factory=lambda: collections.defaultdict(int, {"x": 10, "y": 20})
+            )
+            counter: Dict[str, int] = field(
+                default_factory=lambda: collections.Counter(["a", "b", "a", "c", "a"])
+            )
 
         # 杂鱼♡～创建配置并添加一些值喵～
         config = CustomContainersConfig()
@@ -674,9 +744,13 @@ class TestJSDCLoader(unittest.TestCase):
         self.assertEqual(dict(config.counter), dict(loaded_config.counter))
 
         # 杂鱼♡～验证字典内容喵～
-        self.assertEqual(dict(loaded_config.ordered_dict), {"a": 1, "b": 2, "c": 3, "d": 4})
+        self.assertEqual(
+            dict(loaded_config.ordered_dict), {"a": 1, "b": 2, "c": 3, "d": 4}
+        )
         self.assertEqual(dict(loaded_config.default_dict), {"x": 10, "y": 20, "z": 30})
-        self.assertEqual(dict(loaded_config.counter), {"a": 3, "b": 1, "c": 1, "d": 2, "e": 1})
+        self.assertEqual(
+            dict(loaded_config.counter), {"a": 3, "b": 1, "c": 1, "d": 2, "e": 1}
+        )
         print("杂鱼♡～本喵测试自定义容器类型成功了喵～")
 
     def test_type_validation(self):
@@ -727,7 +801,9 @@ class TestJSDCLoader(unittest.TestCase):
         class SimpleConfig:
             name: str = "test"
             values: List[int] = field(default_factory=lambda: [1, 2, 3])
-            nested: Dict[str, Any] = field(default_factory=lambda: {"a": 1, "b": [2, 3], "c": {"d": 4}})
+            nested: Dict[str, Any] = field(
+                default_factory=lambda: {"a": 1, "b": [2, 3], "c": {"d": 4}}
+            )
 
         config = SimpleConfig()
 
@@ -795,7 +871,9 @@ class TestJSDCLoader(unittest.TestCase):
         # 杂鱼♡～创建一个包含许多项的大型配置喵～
         large_config = PerformanceConfig()
         for i in range(1000):
-            large_config.items.append(SimpleItem(id=i, name=f"Item {i}", value=float(i) * 1.5))
+            large_config.items.append(
+                SimpleItem(id=i, name=f"Item {i}", value=float(i) * 1.5)
+            )
 
         large_config.metadata = {
             "created_at": datetime.datetime.now().isoformat(),
@@ -833,8 +911,12 @@ class TestJSDCLoader(unittest.TestCase):
         self.assertEqual(loaded_config.items[500].name, "Item 500")
         self.assertEqual(loaded_config.items[500].value, 750.0)  # 500 * 1.5 = 750.0
         # 验证metadata结构完整性喵～
-        self.assertEqual(loaded_config.metadata["tags"], ["performance", "test", "jsdc"])
-        self.assertEqual(len(loaded_config.metadata["nested"]["level1"]["level2"]["level3"]), 100)
+        self.assertEqual(
+            loaded_config.metadata["tags"], ["performance", "test", "jsdc"]
+        )
+        self.assertEqual(
+            len(loaded_config.metadata["nested"]["level1"]["level2"]["level3"]), 100
+        )
 
         # 测试字符串序列化的性能（jsdc_dumps）
         start_time = time.time()
@@ -889,7 +971,9 @@ class TestJSDCLoader(unittest.TestCase):
         jsdc_dump(valid_dict_config, self.temp_path)
 
         # 杂鱼♡～添加错误类型的数据喵～
-        invalid_dict_config = DictConfig(mapping={"a": 1, "b": "string", "c": 3})  # 值类型错误
+        invalid_dict_config = DictConfig(
+            mapping={"a": 1, "b": "string", "c": 3}
+        )  # 值类型错误
 
         # 杂鱼♡～序列化应该抛出类型错误喵～
         with self.assertRaises(TypeError):
@@ -906,8 +990,12 @@ class TestJSDCLoader(unittest.TestCase):
         # 杂鱼♡～测试嵌套容器的类型验证喵～
         @dataclass
         class NestedConfig:
-            nested_list: List[List[int]] = field(default_factory=lambda: [[1, 2], [3, 4]])
-            nested_dict: Dict[str, List[int]] = field(default_factory=lambda: {"a": [1, 2], "b": [3, 4]})
+            nested_list: List[List[int]] = field(
+                default_factory=lambda: [[1, 2], [3, 4]]
+            )
+            nested_dict: Dict[str, List[int]] = field(
+                default_factory=lambda: {"a": [1, 2], "b": [3, 4]}
+            )
 
         # 杂鱼♡～初始化正确类型的数据喵～
         valid_nested = NestedConfig()
@@ -917,7 +1005,9 @@ class TestJSDCLoader(unittest.TestCase):
 
         # 杂鱼♡～嵌套列表中添加错误类型喵～
         invalid_nested1 = NestedConfig()
-        invalid_nested1.nested_list[0].append("not an int")  # 杂鱼♡～添加了一个不是整数的元素喵～
+        invalid_nested1.nested_list[0].append(
+            "not an int"
+        )  # 杂鱼♡～添加了一个不是整数的元素喵～
 
         # 杂鱼♡～序列化应该抛出类型错误喵～
         with self.assertRaises(TypeError):
@@ -925,7 +1015,9 @@ class TestJSDCLoader(unittest.TestCase):
 
         # 杂鱼♡～嵌套字典中添加错误类型喵～
         invalid_nested2 = NestedConfig()
-        invalid_nested2.nested_dict["a"].append("not an int")  # 杂鱼♡～添加了一个不是整数的元素喵～
+        invalid_nested2.nested_dict["a"].append(
+            "not an int"
+        )  # 杂鱼♡～添加了一个不是整数的元素喵～
 
         # 杂鱼♡～序列化应该抛出类型错误喵～
         with self.assertRaises(TypeError):
@@ -979,7 +1071,9 @@ class TestJSDCLoader(unittest.TestCase):
         # 杂鱼♡～测试元组类型喵～
         @dataclass
         class TupleConfig:
-            fixed_tuple: Tuple[int, str, bool] = field(default_factory=lambda: (1, "a", True))
+            fixed_tuple: Tuple[int, str, bool] = field(
+                default_factory=lambda: (1, "a", True)
+            )
             var_tuple: Tuple[int, ...] = field(default_factory=lambda: (1, 2, 3))
 
         # 杂鱼♡～初始化正确类型的数据喵～
@@ -989,7 +1083,9 @@ class TestJSDCLoader(unittest.TestCase):
         jsdc_dump(valid_tuple, self.temp_path)
 
         # 杂鱼♡～使用错误类型喵～
-        invalid_tuple1 = TupleConfig(fixed_tuple=(1, 2, True))  # 杂鱼♡～第二个元素应该是str喵～
+        invalid_tuple1 = TupleConfig(
+            fixed_tuple=(1, 2, True)
+        )  # 杂鱼♡～第二个元素应该是str喵～
 
         # 杂鱼♡～序列化应该抛出类型错误喵～
         with self.assertRaises(TypeError):
@@ -1105,11 +1201,17 @@ class TestJSDCLoader(unittest.TestCase):
         # 杂鱼♡～测试无效的Path路径喵～使用一个真正无效的路径～
         # 杂鱼♡～使用一个不存在的根目录路径，这应该会失败喵～
         if os.name == "nt":  # Windows系统
-            invalid_path = Path("Z:\\nonexistent\\directory\\file.json")  # Z盘通常不存在
+            invalid_path = Path(
+                "Z:\\nonexistent\\directory\\file.json"
+            )  # Z盘通常不存在
         else:
-            invalid_path = Path("/nonexistent_root/invalid/file.json")  # Unix系统的无效路径
+            invalid_path = Path(
+                "/nonexistent_root/invalid/file.json"
+            )  # Unix系统的无效路径
 
-        with self.assertRaises((ValueError, OSError, PermissionError, FileNotFoundError)):
+        with self.assertRaises(
+            (ValueError, OSError, PermissionError, FileNotFoundError)
+        ):
             jsdc_dump(SimpleConfig(), invalid_path)
 
         # 杂鱼♡～测试向一个已存在的文件（非目录）写入时的错误喵～
@@ -1155,7 +1257,9 @@ class TestJSDCLoader(unittest.TestCase):
 
         for i, (any_val, union_val, opt_val) in enumerate(test_cases):
             with self.subTest(case=i):
-                config = MixedConfig(any_field=any_val, union_field=union_val, optional_field=opt_val)
+                config = MixedConfig(
+                    any_field=any_val, union_field=union_val, optional_field=opt_val
+                )
 
                 # 杂鱼♡～序列化和反序列化喵～
                 jsdc_dump(config, self.temp_path)
@@ -1287,8 +1391,12 @@ class TestJSDCLoader(unittest.TestCase):
             uses_chunked_storage: bool = True
             timestamp: float = field(default_factory=time.time)
             failed_task_ids: List[int] = field(default_factory=list)
-            retry_counts: Dict[int, int] = field(default_factory=dict)  # 杂鱼♡～整数键字典喵～
-            task_errors: Dict[int, str] = field(default_factory=dict)  # 杂鱼♡～整数键字典喵～
+            retry_counts: Dict[int, int] = field(
+                default_factory=dict
+            )  # 杂鱼♡～整数键字典喵～
+            task_errors: Dict[int, str] = field(
+                default_factory=dict
+            )  # 杂鱼♡～整数键字典喵～
             processing_task_ids: List[int] = field(default_factory=list)
 
         # 杂鱼♡～测试基础序列化/反序列化喵～
@@ -1298,7 +1406,10 @@ class TestJSDCLoader(unittest.TestCase):
         progress.failed_task_ids = [4]
         progress.processing_task_ids = [5, 6]
         progress.retry_counts = {4: 2, 7: 1}  # 杂鱼♡～整数键字典喵～
-        progress.task_errors = {4: "连接超时", 7: "数据解析失败"}  # 杂鱼♡～整数键字典喵～
+        progress.task_errors = {
+            4: "连接超时",
+            7: "数据解析失败",
+        }  # 杂鱼♡～整数键字典喵～
 
         # 杂鱼♡～序列化到文件喵～
         jsdc_dump(progress, self.temp_path)
@@ -1311,8 +1422,12 @@ class TestJSDCLoader(unittest.TestCase):
         self.assertEqual(loaded_progress.completed_task_ids, [1, 2, 3])
         self.assertEqual(loaded_progress.failed_task_ids, [4])
         self.assertEqual(loaded_progress.processing_task_ids, [5, 6])
-        self.assertEqual(loaded_progress.retry_counts, {4: 2, 7: 1})  # 杂鱼♡～整数键应该被正确恢复喵～
-        self.assertEqual(loaded_progress.task_errors, {4: "连接超时", 7: "数据解析失败"})
+        self.assertEqual(
+            loaded_progress.retry_counts, {4: 2, 7: 1}
+        )  # 杂鱼♡～整数键应该被正确恢复喵～
+        self.assertEqual(
+            loaded_progress.task_errors, {4: "连接超时", 7: "数据解析失败"}
+        )
         self.assertTrue(loaded_progress.uses_chunked_storage)
         self.assertIsInstance(loaded_progress.timestamp, float)
 
@@ -1323,7 +1438,9 @@ class TestJSDCLoader(unittest.TestCase):
         # 杂鱼♡～从字符串反序列化喵～
         loaded_from_str = jsdc_loads(json_str, ProcessingProgress)
         self.assertEqual(loaded_from_str.retry_counts, {4: 2, 7: 1})
-        self.assertEqual(loaded_from_str.task_errors, {4: "连接超时", 7: "数据解析失败"})
+        self.assertEqual(
+            loaded_from_str.task_errors, {4: "连接超时", 7: "数据解析失败"}
+        )
 
         # 杂鱼♡～测试大量数据喵～
         large_progress = ProcessingProgress()
@@ -1334,7 +1451,9 @@ class TestJSDCLoader(unittest.TestCase):
         # 杂鱼♡～为失败任务添加重试次数和错误信息喵～
         for task_id in large_progress.failed_task_ids:
             large_progress.retry_counts[task_id] = (task_id % 5) + 1  # 1到5次重试
-            large_progress.task_errors[task_id] = f"任务{task_id}执行失败: 错误代码{task_id % 10}"
+            large_progress.task_errors[task_id] = (
+                f"任务{task_id}执行失败: 错误代码{task_id % 10}"
+            )
 
         # 杂鱼♡～序列化和反序列化大量数据喵～
         jsdc_dump(large_progress, self.temp_path)
@@ -1354,7 +1473,11 @@ class TestJSDCLoader(unittest.TestCase):
         # 杂鱼♡～测试边缘情况：负数任务ID喵～
         edge_progress = ProcessingProgress()
         edge_progress.retry_counts = {-5: 1, -10: 3, 0: 2}
-        edge_progress.task_errors = {-5: "负数任务测试", -10: "另一个负数任务测试", 0: "零ID任务"}
+        edge_progress.task_errors = {
+            -5: "负数任务测试",
+            -10: "另一个负数任务测试",
+            0: "零ID任务",
+        }
 
         jsdc_dump(edge_progress, self.temp_path)
         loaded_edge = jsdc_load(self.temp_path, ProcessingProgress)
@@ -1395,7 +1518,9 @@ class TestJSDCLoader(unittest.TestCase):
         jsdc_dump(float_config, self.temp_path)
         loaded_float = jsdc_load(self.temp_path, FloatKeyConfig)
 
-        self.assertEqual(loaded_float.float_to_str, {1.5: "one and half", 3.14: "pi", 2.718: "e"})
+        self.assertEqual(
+            loaded_float.float_to_str, {1.5: "one and half", 3.14: "pi", 2.718: "e"}
+        )
 
         # 杂鱼♡～测试布尔键字典喵～
         @dataclass

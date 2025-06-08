@@ -73,15 +73,21 @@ def jsdc_dumps(obj: T, indent: int = 4) -> str:
         obj_type = type(obj)
 
         # 杂鱼♡～本喵把类型信息也传递给转换函数，这样就能进行完整的类型验证了喵～
-        data_dict = convert_dataclass_to_dict(obj, parent_key="root", parent_type=obj_type)
-        return json.dumps(data_dict, ensure_ascii=False, indent=indent, cls=JSDCJSONEncoder)
+        data_dict = convert_dataclass_to_dict(
+            obj, parent_key="root", parent_type=obj_type
+        )
+        return json.dumps(
+            data_dict, ensure_ascii=False, indent=indent, cls=JSDCJSONEncoder
+        )
     except TypeError as e:
         raise TypeError(f"杂鱼♡～类型验证失败喵：{str(e)}～真是个笨蛋呢～")
     except Exception as e:
         raise ValueError(f"杂鱼♡～序列化过程中出错喵：{str(e)}～")
 
 
-def jsdc_dump(obj: T, output_path: Union[str, Path], encoding: str = "utf-8", indent: int = 4) -> None:
+def jsdc_dump(
+    obj: T, output_path: Union[str, Path], encoding: str = "utf-8", indent: int = 4
+) -> None:
     """杂鱼♡～本喵帮你把dataclass或Pydantic模型实例序列化成JSON文件喵～
 
     这个函数接收一个dataclass实例，并将其序列化表示写入到指定文件中，
@@ -131,7 +137,12 @@ def jsdc_dump(obj: T, output_path: Union[str, Path], encoding: str = "utf-8", in
         # 杂鱼♡～使用临时文件进行安全写入喵～
         # 在同一目录创建临时文件，确保重命名操作在同一文件系统内执行喵～
         temp_file = tempfile.NamedTemporaryFile(
-            prefix=f".{abs_path.name}.", dir=str(directory), suffix=".tmp", delete=False, mode="w", encoding=encoding
+            prefix=f".{abs_path.name}.",
+            dir=str(directory),
+            suffix=".tmp",
+            delete=False,
+            mode="w",
+            encoding=encoding,
         )
 
         temp_path = temp_file.name

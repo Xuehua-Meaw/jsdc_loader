@@ -48,7 +48,12 @@ class ComplexJSONEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
-def save_json_file(file_path: Union[str, Path], data: Dict[str, Any], encoding: str = "utf-8", indent: int = 4) -> None:
+def save_json_file(
+    file_path: Union[str, Path],
+    data: Dict[str, Any],
+    encoding: str = "utf-8",
+    indent: int = 4,
+) -> None:
     """
     杂鱼♡～本喵帮你把数据保存为JSON文件喵～
 
@@ -64,13 +69,21 @@ def save_json_file(file_path: Union[str, Path], data: Dict[str, Any], encoding: 
 
     try:
         with path.open("w", encoding=encoding) as f:
-            json.dump(data, f, ensure_ascii=False, indent=indent, cls=ComplexJSONEncoder)
+            json.dump(
+                data, f, ensure_ascii=False, indent=indent, cls=ComplexJSONEncoder
+            )
     except OSError as e:
         raise OSError(f"杂鱼♡～写入文件失败喵：{path}，错误：{str(e)}～")
     except TypeError as e:
         raise TypeError(f"杂鱼♡～无法将数据序列化为JSON喵，错误：{str(e)}～")
     except UnicodeEncodeError as e:
-        raise UnicodeEncodeError(f"杂鱼♡～用{encoding}编码数据失败喵，错误：{str(e)}～", e.object, e.start, e.end, e.reason)
+        raise UnicodeEncodeError(
+            f"杂鱼♡～用{encoding}编码数据失败喵，错误：{str(e)}～",
+            e.object,
+            e.start,
+            e.end,
+            e.reason,
+        )
     except Exception as e:
         raise ValueError(f"杂鱼♡～JSON序列化过程中出错喵：{str(e)}～")
 
@@ -100,6 +113,8 @@ def check_file_size(file_path: Union[str, Path], max_size: int) -> None:
     try:
         file_size = path.stat().st_size
         if file_size > max_size:
-            raise ValueError(f"杂鱼♡～文件大小超过限制喵！当前大小：{file_size}字节，最大允许：{max_size}字节～")
+            raise ValueError(
+                f"杂鱼♡～文件大小超过限制喵！当前大小：{file_size}字节，最大允许：{max_size}字节～"
+            )
     except PermissionError:
         raise PermissionError(f"杂鱼♡～没有权限检查文件大小喵：{path}～")
