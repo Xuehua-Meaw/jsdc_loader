@@ -13,6 +13,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
+    "orjson"
     # 杂鱼♡～本喵把基础依赖留空了，这样核心功能不依赖任何第三方库喵～
 ]
 
