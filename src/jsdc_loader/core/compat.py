@@ -21,6 +21,8 @@ except ImportError:
     HAS_PYDANTIC = False
     PYDANTIC_V2 = False
 
+# 杂鱼♡～本喵添加了一个缓存来优化Pydantic检查喵～
+_PYDANTIC_TYPE_CACHE = {}
 
 def is_pydantic_model(obj: Any) -> bool:
     """杂鱼♡～本喵帮你检查对象是否是 Pydantic 模型喵～"""
@@ -30,10 +32,15 @@ def is_pydantic_model(obj: Any) -> bool:
 
 
 def is_pydantic_instance(obj: Any) -> bool:
-    """杂鱼♡～本喵帮你检查对象是否是 Pydantic 模型实例喵～"""
+    """杂鱼♡～本喵帮你检查对象是否是 Pydantic 模型实例喵～优化版本～"""
     if not HAS_PYDANTIC:
         return False
-    return isinstance(obj, BaseModel)
+    
+    # 杂鱼♡～本喵用类型缓存来避免重复检查喵～
+    obj_type = type(obj)
+    if obj_type not in _PYDANTIC_TYPE_CACHE:
+        _PYDANTIC_TYPE_CACHE[obj_type] = isinstance(obj, BaseModel)
+    return _PYDANTIC_TYPE_CACHE[obj_type]
 
 
 def validate_pydantic_available(operation: str = "此操作") -> None:
