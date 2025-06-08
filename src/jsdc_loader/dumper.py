@@ -8,11 +8,10 @@ import uuid
 from dataclasses import is_dataclass
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, Union, Optional, Tuple
+from typing import Any, Union
 
 from .core.compat import is_pydantic_instance
 from .core.converter import convert_dataclass_to_dict
-from .core.validator import validate_dataclass
 from .core.types import T
 from .file_ops import ensure_directory_exists
 
@@ -43,58 +42,47 @@ class JSDCJSONEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
-def jsdc_dumps(
-    obj,
-    *,
-    indent: Optional[Union[int, str]] = None,
-    separators: Optional[Tuple[str, str]] = None,
-    sort_keys: bool = False,
-    ensure_ascii: bool = True,
-    performance_mode: bool = False,  # 杂鱼♡～本喵添加了性能模式选项喵～
-) -> str:
-    """
-    杂鱼♡～这是本喵为你写的序列化函数喵～
+def jsdc_dumps(obj: T, indent: int = 4) -> str:
+    """杂鱼♡～本喵帮你把dataclass或Pydantic模型实例序列化成JSON字符串喵～
+
+    这个函数接收一个dataclass实例，并将其序列化为JSON字符串喵～
+    JSON输出可以使用指定的缩进级别格式化喵～杂鱼是不是太懒了，连文件都不想写呢♡～
 
     Args:
-        obj: 要序列化的对象，必须是dataclass或Pydantic BaseModel实例
-        indent: JSON缩进，默认为None（不缩进）
-        separators: JSON分隔符，默认为None
-        sort_keys: 是否对字典键排序，默认为False
-        ensure_ascii: 是否确保ASCII编码，默认为True
-        performance_mode: 是否启用性能模式（减少类型验证），默认为False
-    
+        obj (T): 要序列化的dataclass实例喵～
+        indent (int, optional): JSON输出中使用的缩进空格数喵～默认是4～看起来整齐一点～
+
     Returns:
-        JSON字符串
-        
+        str: 序列化后的JSON字符串喵～杂鱼可以好好利用它哦～
+
     Raises:
-        TypeError: 杂鱼♡～如果对象不是dataclass或BaseModel实例就会报错喵～
-        ValueError: 杂鱼♡～如果对象无法序列化就会报错喵～
+        TypeError: 如果obj不是dataclass或BaseModel，杂鱼肯定传错参数了～
+        ValueError: 如果序列化过程中出错，本喵会生气地抛出错误喵！～
     """
-    if obj is None:
-        raise ValueError("杂鱼♡～不能序列化None对象喵！～")
+    if indent < 0:
+        raise ValueError("杂鱼♡～缩进必须是非负数喵！～负数是什么意思啦～")
 
     try:
-        # 杂鱼♡～本喵先验证对象类型喵～
-        validate_dataclass(obj.__class__)
-        
-        # 杂鱼♡～然后把dataclass转换为字典喵～
-        if performance_mode:
-            # 杂鱼♡～性能模式：跳过大部分类型验证，加快序列化速度喵～
-            dict_obj = convert_dataclass_to_dict(obj, _skip_validation=True)
-        else:
-            # 杂鱼♡～普通模式：完整的类型验证喵～
-            dict_obj = convert_dataclass_to_dict(obj)
-        
-        # 杂鱼♡～最后序列化为JSON字符串喵～
-        return json.dumps(
-            dict_obj,
-            indent=indent,
-            separators=separators,
-            sort_keys=sort_keys,
-            ensure_ascii=ensure_ascii,
+        if isinstance(obj, type):
+            raise TypeError("杂鱼♡～obj必须是实例而不是类喵！～你真是搞不清楚呢～")
+
+        if not (is_dataclass(obj) or is_pydantic_instance(obj)):
+            raise TypeError("杂鱼♡～obj必须是dataclass或Pydantic BaseModel实例喵！～")
+
+        # 获取对象的类型提示
+        obj_type = type(obj)
+
+        # 杂鱼♡～本喵把类型信息也传递给转换函数，这样就能进行完整的类型验证了喵～
+        data_dict = convert_dataclass_to_dict(
+            obj, parent_key="root", parent_type=obj_type
         )
+        return json.dumps(
+            data_dict, ensure_ascii=False, indent=indent, cls=JSDCJSONEncoder
+        )
+    except TypeError as e:
+        raise TypeError(f"杂鱼♡～类型验证失败喵：{str(e)}～真是个笨蛋呢～")
     except Exception as e:
-        raise ValueError(f"杂鱼♡～序列化失败喵：{str(e)}～") from e
+        raise ValueError(f"杂鱼♡～序列化过程中出错喵：{str(e)}～")
 
 
 def jsdc_dump(

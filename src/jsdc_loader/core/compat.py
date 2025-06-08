@@ -3,6 +3,9 @@
 import warnings
 from typing import Any, Optional, Type
 
+# 杂鱼♡～本喵导入缓存来优化性能喵～
+from .types import _PYDANTIC_INSTANCE_CACHE, _PYDANTIC_MODEL_CACHE
+
 # 杂鱼♡～本喵尝试导入 pydantic，如果失败就设置为 None 喵～
 try:
     from pydantic import BaseModel
@@ -21,26 +24,39 @@ except ImportError:
     HAS_PYDANTIC = False
     PYDANTIC_V2 = False
 
-# 杂鱼♡～本喵添加了一个缓存来优化Pydantic检查喵～
-_PYDANTIC_TYPE_CACHE = {}
 
 def is_pydantic_model(obj: Any) -> bool:
-    """杂鱼♡～本喵帮你检查对象是否是 Pydantic 模型喵～"""
-    if not HAS_PYDANTIC:
-        return False
-    return isinstance(obj, type) and issubclass(obj, BaseModel)
-
-
-def is_pydantic_instance(obj: Any) -> bool:
-    """杂鱼♡～本喵帮你检查对象是否是 Pydantic 模型实例喵～优化版本～"""
+    """杂鱼♡～本喵帮你检查对象是否是 Pydantic 模型喵～现在有缓存了更快喵～"""
     if not HAS_PYDANTIC:
         return False
     
-    # 杂鱼♡～本喵用类型缓存来避免重复检查喵～
+    obj_type = type(obj) if not isinstance(obj, type) else obj
+    
+    # 杂鱼♡～检查缓存喵～
+    if obj_type in _PYDANTIC_MODEL_CACHE:
+        return _PYDANTIC_MODEL_CACHE[obj_type]
+    
+    # 杂鱼♡～计算并缓存结果喵～
+    result = isinstance(obj, type) and issubclass(obj, BaseModel)
+    _PYDANTIC_MODEL_CACHE[obj_type] = result
+    return result
+
+
+def is_pydantic_instance(obj: Any) -> bool:
+    """杂鱼♡～本喵帮你检查对象是否是 Pydantic 模型实例喵～现在有缓存了更快喵～"""
+    if not HAS_PYDANTIC:
+        return False
+    
     obj_type = type(obj)
-    if obj_type not in _PYDANTIC_TYPE_CACHE:
-        _PYDANTIC_TYPE_CACHE[obj_type] = isinstance(obj, BaseModel)
-    return _PYDANTIC_TYPE_CACHE[obj_type]
+    
+    # 杂鱼♡～检查缓存喵～
+    if obj_type in _PYDANTIC_INSTANCE_CACHE:
+        return _PYDANTIC_INSTANCE_CACHE[obj_type]
+    
+    # 杂鱼♡～计算并缓存结果喵～
+    result = isinstance(obj, BaseModel)
+    _PYDANTIC_INSTANCE_CACHE[obj_type] = result
+    return result
 
 
 def validate_pydantic_available(operation: str = "此操作") -> None:
