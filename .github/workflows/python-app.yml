@@ -68,9 +68,8 @@ jobs:
       run: |
         # 杂鱼♡～先卸载pydantic测试基础功能喵～
         pip uninstall pydantic -y || true
-        python -m pytest src/jsdc_loader/tests.py::TestJSDCLoader::test_basic_serialization -v
-        python -m pytest src/jsdc_loader/tests.py::TestJSDCLoader::test_enum_serialization -v
-        python -m pytest src/jsdc_loader/tests.py::TestJSDCLoader::test_nested_dataclasses -v
+        # 杂鱼♡～运行所有测试，没有pydantic的测试会被自动跳过喵～
+        python -m pytest src/jsdc_loader/tests.py -v -k "not test_pydantic"
         
     - name: Test with pytest (full dependencies)
       # 杂鱼♡～本喵再测试完整功能，包括pydantic支持喵～

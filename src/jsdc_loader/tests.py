@@ -13,7 +13,16 @@ from enum import Enum, auto
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
-from pydantic import BaseModel
+# 杂鱼♡～本喵要让pydantic导入变成可选的喵～
+try:
+    from pydantic import BaseModel
+    HAS_PYDANTIC = True
+except ImportError:
+    # 杂鱼♡～没有pydantic时，本喵创建一个虚拟的BaseModel喵～
+    HAS_PYDANTIC = False
+    class BaseModel:
+        """杂鱼♡～虚拟的BaseModel，只是为了测试能运行喵～"""
+        pass
 
 from .dumper import jsdc_dump, jsdc_dumps
 from .loader import jsdc_load, jsdc_loads
@@ -128,6 +137,10 @@ class TestJSDCLoader(unittest.TestCase):
 
     def test_pydantic_models(self):
         """杂鱼♡～本喵要测试Pydantic模型了喵～"""
+        
+        # 杂鱼♡～如果没有pydantic，本喵就跳过这个测试喵～
+        if not HAS_PYDANTIC:
+            self.skipTest("杂鱼♡～没有pydantic，本喵跳过这个测试喵～")
 
         class ServerConfig(BaseModel):
             name: str = "main"
