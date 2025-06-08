@@ -143,4 +143,4 @@ jobs:
       # 杂鱼♡～本喵使用trusted publishing发布到PyPI喵～
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
-        skip-existing: true
+        token: ${{ secrets.PYPI_API_TOKEN }}
