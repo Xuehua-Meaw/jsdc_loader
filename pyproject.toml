@@ -1,6 +1,6 @@
 [project]
 name = "jsdc_loader"
-version = "0.1.011"
+version = "0.2.0"
 authors = [
   { name="StanleyUKN", email="stanley09537000@gmail.com" },
 ]
@@ -13,6 +13,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
+    "orjson"
     # 杂鱼♡～本喵把基础依赖留空了，这样核心功能不依赖任何第三方库喵～
 ]
 

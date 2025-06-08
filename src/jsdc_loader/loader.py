@@ -1,6 +1,7 @@
 """杂鱼♡～这是本喵为你写的JSDC Loader的加载函数喵～本喵可是很擅长把JSON变成对象呢～"""
 
-import json
+import orjson # 杂鱼♡～本喵现在用orjson了喵～更快更强喵～
+import json # 杂鱼♡～保留json仅用于JSONDecodeError的类型提示，如果orjson的错误类型不同的话喵～
 from pathlib import Path
 from typing import Optional, Type, Union, List as TypingList # Use TypingList to avoid conflict with list type
 
@@ -44,13 +45,30 @@ def jsdc_load(
     # 杂鱼♡～目标类验证现在移到 jsdc_loads 中了喵～
 
     try:
-        with path.open("r", encoding=encoding) as f:
-            # 杂鱼♡～直接调用 jsdc_loads 处理字符串内容喵～
-            # 这样逻辑更统一，而且 jsdc_loads 会处理 List[T] 的情况喵～
-            return jsdc_loads(f.read(), target_class)
-    # 杂鱼♡～json.JSONDecodeError 和 ValueError (empty json_str) 已经在 jsdc_loads 中处理了喵～
+        # 杂鱼♡～orjson期望读取bytes，所以用 'rb' 模式喵～
+        with path.open("rb") as f:
+            # 杂鱼♡～orjson.loads可以直接处理bytes，效率更高喵～
+            # jsdc_loads 将处理从bytes到Python对象的转换和后续的dataclass转换喵～
+            # 文件内容本身已经是bytes，不需要f.read().decode(encoding)再传给jsdc_loads了喵
+            # jsdc_loads内部的orjson.loads会处理bytes
+            # 不过，jsdc_loads的签名是json_str: str。需要调整。
+            # 为了最小化改动，我们先读成str，再传给jsdc_loads，尽管这不是最高效的orjson用法。
+            # 理想情况是jsdc_loads也能接受bytes。
+            # 暂时：
+            file_content = f.read()
+            try:
+                decoded_content = file_content.decode(encoding)
+            except UnicodeDecodeError as ude:
+                raise ValueError(
+                    f"杂鱼♡～用{encoding}解码失败喵：{str(ude)}～杂鱼是不是编码搞错了？～"
+                )
+            return jsdc_loads(decoded_content, target_class)
+
+    # 杂鱼♡～orjson.JSONDecodeError 和 ValueError (empty json_str) 已经在 jsdc_loads 中处理了喵～
     # 只需要处理文件相关的特定异常喵～
-    except UnicodeDecodeError as e:
+    except orjson.JSONDecodeError as e: # 捕获orjson的特定错误喵～
+        raise ValueError(f"杂鱼♡～无效的JSON喵 (来自orjson)：{str(e)}～")
+    except UnicodeDecodeError as e: # This might be redundant if decode is handled above or if orjson handles it.
         raise ValueError(
             f"杂鱼♡～用{encoding}解码失败喵：{str(e)}～杂鱼是不是编码搞错了？～"
         )
@@ -76,7 +94,8 @@ def jsdc_loads(json_str: str, target_class: Type[T]) -> T:
         raise ValueError("杂鱼♡～JSON字符串为空喵！～")
 
     try:
-        json_data = json.loads(json_str)
+        # 杂鱼♡～本喵现在用orjson.loads()了喵～它更快喵～
+        json_data = orjson.loads(json_str)
 
         # 如果数据为空 (例如 "null", "[]", "{}")，对于某些 target_class 这可能是有效的 (例如 Optional, List)
         # 但 convert_dict_to_dataclass 期望一个非空字典。
@@ -113,7 +132,7 @@ def jsdc_loads(json_str: str, target_class: Type[T]) -> T:
                 raise ValueError("杂鱼♡～单个对象的JSON数据不能为空字典或空列表喵！～")
             return convert_dict_to_dataclass(json_data, target_class)
 
-    except json.JSONDecodeError as e:
-        raise ValueError(f"杂鱼♡～无效的JSON喵：{str(e)}～")
+    except orjson.JSONDecodeError as e: # 捕获orjson的特定错误喵～
+        raise ValueError(f"杂鱼♡～无效的JSON喵 (来自orjson)：{str(e)}～")
     except Exception as e:
         raise ValueError(f"杂鱼♡～加载或转换过程中出错喵：{str(e)}～")

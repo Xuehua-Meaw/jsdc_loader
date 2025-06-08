@@ -1,49 +1,34 @@
 """杂鱼♡～这是本喵的序列化工具喵～本喵可以把你的dataclass和Pydantic模型变成JSON喵～"""
 
 import datetime
-import json
+import orjson # 杂鱼♡～本喵现在用orjson了喵～
 import os
 import tempfile
 import uuid
 from dataclasses import is_dataclass
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, Union
+from typing import Any, Union, Optional
 
 from .core.compat import is_pydantic_instance
 from .core.converter import convert_dataclass_to_dict
 from .core.types import T
 from .file_ops import ensure_directory_exists
-from typing import Optional
 
 
-# 杂鱼♡～本喵创建了一个自定义JSON编码器，这样就可以处理各种复杂类型喵～
-class JSDCJSONEncoder(json.JSONEncoder):
-    """杂鱼♡～这是本喵为你特制的JSON编码器喵～可以处理各种特殊类型哦～"""
-
-    def default(self, obj: Any) -> Any:
-        """杂鱼♡～本喵会把这些特殊类型转换成JSON兼容的格式喵～"""
-        if isinstance(obj, datetime.datetime):
-            return obj.isoformat()
-        elif isinstance(obj, datetime.date):
-            return obj.isoformat()
-        elif isinstance(obj, datetime.time):
-            return obj.isoformat()
-        elif isinstance(obj, datetime.timedelta):
-            return obj.total_seconds()
-        elif isinstance(obj, uuid.UUID):
-            return str(obj)
-        elif isinstance(obj, Decimal):
-            return str(obj)
-        elif isinstance(obj, set):
-            return list(obj)
-        elif is_dataclass(obj):
-            return convert_dataclass_to_dict(obj)
-        # 杂鱼♡～其他类型就交给父类处理喵～
-        return super().default(obj)
+# 杂鱼♡～orjson的默认处理器喵～
+def _orjson_default_handler(obj: Any) -> Any:
+    """杂鱼♡～本喵帮orjson处理它不认识的类型喵～"""
+    if isinstance(obj, datetime.timedelta):
+        return obj.total_seconds()  # orjson本身不处理timedelta
+    elif isinstance(obj, Decimal):
+        return str(obj)  # orjson本身不处理Decimal
+    # 杂鱼♡～datetime, date, time, UUID, set, Enum, dataclasses 都是orjson原生支持的喵～
+    # 杂鱼♡～Dataclasses 和 Pydantic 模型在到达这里之前已经被 convert_dataclass_to_dict 转换成字典了喵～
+    raise TypeError(f"杂鱼♡～类型 {type(obj)} 本喵的orjson默认处理器也处理不了喵～")
 
 
-def jsdc_dumps(obj: T, indent: Optional[int] = 2, **kwargs) -> str: # Changed default to 2 to match test_formatting_options expectations if None is not used
+def jsdc_dumps(obj: T, indent: Optional[int] = 2, **kwargs) -> str:
     """杂鱼♡～本喵帮你把dataclass或Pydantic模型实例序列化成JSON字符串喵～
 
     这个函数接收一个dataclass实例，并将其序列化为JSON字符串喵～
@@ -96,9 +81,24 @@ def jsdc_dumps(obj: T, indent: Optional[int] = 2, **kwargs) -> str: # Changed de
         else:
             raise TypeError("杂鱼♡～obj必须是dataclass、Pydantic BaseModel实例或这些实例的列表喵！～")
 
-        return json.dumps(
-            data_to_dump, ensure_ascii=False, indent=indent, cls=JSDCJSONEncoder, **kwargs
-        )
+        # 杂鱼♡～准备orjson的选项喵～
+        orjson_options = 0
+        if indent is not None and indent > 0:
+            # orjson 主要支持 OPT_INDENT_2。如果需要其他缩进，需要额外处理或接受此限制。
+            # 为了简单起见，任何正整数indent都映射到OPT_INDENT_2。
+            orjson_options |= orjson.OPT_INDENT_2
+
+        # 杂鱼♡～如果kwargs里有sort_keys=True，本喵就加上OPT_SORT_KEYS喵～
+        if kwargs.get("sort_keys", False):
+            orjson_options |= orjson.OPT_SORT_KEYS
+            # 杂鱼♡～确保kwargs里的sort_keys不会传给orjson.dumps，因为它不认识这个参数名喵～
+            # (实际上orjson.dumps不接受**kwargs，所以这里不需要del，但要注意传递的参数)
+
+        # 杂鱼♡～ensure_ascii在orjson中是默认行为（总是UTF-8）喵～
+
+        orjson_bytes = orjson.dumps(data_to_dump, default=_orjson_default_handler, option=orjson_options)
+        return orjson_bytes.decode("utf-8") # orjson.dumps返回bytes，需要解码成字符串喵～
+
     except TypeError as e:
         raise TypeError(f"杂鱼♡～类型验证失败喵：{str(e)}～真是个笨蛋呢～")
     except Exception as e:
@@ -152,34 +152,56 @@ def jsdc_dump(
             raise TypeError("杂鱼♡～obj必须是实例而不是类喵！～你真是搞不清楚呢～")
 
         # 杂鱼♡～类型检查 (single instance or list of instances) 现在由 jsdc_dumps 处理了喵～
-        # jsdc_dump 只需要负责文件操作和调用 jsdc_dumps 喵～
+        # jsdc_dump 只需要负责文件操作和调用 jsdc_dumps 喵～ (不对，现在要直接用orjson.dumps)
 
-        # 杂鱼♡～先序列化为字符串喵～
-        json_str = jsdc_dumps(obj, indent=indent, **kwargs) # Pass through kwargs if any future ones are added to jsdc_dumps
+        if isinstance(obj, type):
+            raise TypeError("杂鱼♡～obj必须是实例而不是类喵！～你真是搞不清楚呢～")
 
-        # 杂鱼♡～使用临时文件进行安全写入喵～
-        # 在同一目录创建临时文件，确保重命名操作在同一文件系统内执行喵～
+        # 预处理对象为字典或字典列表 (与jsdc_dumps一致)
+        if isinstance(obj, list):
+            processed_list = []
+            for i, item in enumerate(obj):
+                if not (is_dataclass(item) or is_pydantic_instance(item)):
+                    raise TypeError(
+                        f"杂鱼♡～列表中的第 {i} 个元素不是有效的dataclass或Pydantic实例喵！～"
+                    )
+                processed_list.append(convert_dataclass_to_dict(item, parent_key=f"root[{i}]", parent_type=type(item)))
+            data_to_dump = processed_list
+        elif is_dataclass(obj) or is_pydantic_instance(obj):
+            obj_type = type(obj)
+            data_to_dump = convert_dataclass_to_dict(
+                obj, parent_key="root", parent_type=obj_type
+            )
+        else:
+            raise TypeError("杂鱼♡～obj必须是dataclass、Pydantic BaseModel实例或这些实例的列表喵！～")
+
+        # 准备orjson选项
+        orjson_options = 0
+        if indent is not None and indent > 0:
+            orjson_options |= orjson.OPT_INDENT_2
+
+        if kwargs.get("sort_keys", False): # jsdc_dump的kwargs现在可以接受sort_keys了喵～
+            orjson_options |= orjson.OPT_SORT_KEYS
+
+        orjson_bytes = orjson.dumps(data_to_dump, default=_orjson_default_handler, option=orjson_options)
+
+        # 杂鱼♡～使用临时文件进行安全写入喵～ (写入bytes)
         temp_file = tempfile.NamedTemporaryFile(
             prefix=f".{abs_path.name}.",
             dir=str(directory),
             suffix=".tmp",
             delete=False,
-            mode="w",
-            encoding=encoding,
+            mode="wb", # 写入二进制喵～
         )
 
         temp_path = temp_file.name
         try:
-            # 杂鱼♡～写入临时文件喵～
-            temp_file.write(json_str)
-            # 必须先刷新缓冲区喵～
+            temp_file.write(orjson_bytes) # 写入bytes喵～
             temp_file.flush()
-            # 确保文件内容已完全写入磁盘喵～然后再关闭文件～
             os.fsync(temp_file.fileno())
             temp_file.close()
 
-            # 杂鱼♡～使用原子操作将临时文件重命名为目标文件喵～
-            # 在Windows上，如果目标文件已存在，可能会失败，所以先尝试删除喵～
+            # 杂鱼♡～原子重命名操作喵～
             if abs_path.exists():
                 abs_path.unlink()
 
