@@ -2,7 +2,8 @@
 
 from dataclasses import is_dataclass
 from enum import Enum
-from typing import Any, Dict, List, Set, Tuple, Type, Union, get_args, get_origin
+from typing import (Any, Dict, List, Set, Tuple, Type, Union, get_args,
+                    get_origin)
 
 from .compat import is_pydantic_model
 from .types import _TYPE_HINTS_CACHE

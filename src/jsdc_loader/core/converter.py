@@ -7,12 +7,8 @@ from decimal import Decimal
 from enum import Enum
 from typing import Any, Type, Union, get_args, get_origin
 
-from .compat import (
-    create_pydantic_from_dict,
-    is_pydantic_instance,
-    is_pydantic_model,
-    pydantic_to_dict,
-)
+from .compat import (create_pydantic_from_dict, is_pydantic_instance,
+                     is_pydantic_model, pydantic_to_dict)
 from .types import T
 from .validator import get_cached_type_hints, validate_type
 
