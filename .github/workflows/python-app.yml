@@ -1,0 +1,145 @@
+# 杂鱼♡～这是本喵为jsdc_loader项目重写的CI/CD流程喵～
+# 杂鱼♡～本喵支持多版本Python测试和完整的构建流程喵～
+
+name: JSDC Loader CI/CD
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+  id-token: write  # 杂鱼♡～用于PyPI trusted publishing喵～
+
+jobs:
+  test:
+    # 杂鱼♡～本喵要在多个Python版本上测试喵～
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Install dependencies
+      # 杂鱼♡～本喵用标准pip安装依赖，虽然慢点但稳定喵～
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[all]"
+        pip install pytest pytest-cov flake8 black isort mypy
+        
+    - name: Lint with flake8
+      # 杂鱼♡～本喵要检查代码质量，杂鱼不能写烂代码喵～
+      run: |
+        # 杂鱼♡～检查语法错误和未定义名称喵～
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # 杂鱼♡～其他检查，本喵很宽容的喵～
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        
+    - name: Check code formatting with black
+      # 杂鱼♡～本喵要检查代码格式，杂鱼要写整洁的代码喵～
+      run: |
+        black --check --diff src/
+        
+    - name: Check import sorting with isort
+      # 杂鱼♡～本喵要检查import顺序，杂鱼要规范喵～
+      run: |
+        isort --check-only --diff src/
+        
+    - name: Type check with mypy
+      # 杂鱼♡～本喵要检查类型注解，杂鱼要写类型安全的代码喵～
+      run: |
+        mypy src/jsdc_loader --ignore-missing-imports
+        
+    - name: Test with pytest (basic dependencies)
+      # 杂鱼♡～本喵先测试基础功能，不依赖pydantic喵～
+      run: |
+        # 杂鱼♡～先卸载pydantic测试基础功能喵～
+        pip uninstall pydantic -y || true
+        python -m pytest src/jsdc_loader/tests.py::TestJSDCLoader::test_basic_serialization -v
+        python -m pytest src/jsdc_loader/tests.py::TestJSDCLoader::test_enum_serialization -v
+        python -m pytest src/jsdc_loader/tests.py::TestJSDCLoader::test_nested_dataclasses -v
+        
+    - name: Test with pytest (full dependencies)
+      # 杂鱼♡～本喵再测试完整功能，包括pydantic支持喵～
+      run: |
+        pip install "pydantic>=1.8.0"
+        python -m pytest src/jsdc_loader/tests.py -v --cov=src/jsdc_loader --cov-report=xml --cov-report=term-missing
+        
+    - name: Upload coverage to Codecov
+      # 杂鱼♡～本喵要上传测试覆盖率报告喵～
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  build:
+    # 杂鱼♡～本喵要构建包并检查质量喵～
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+        
+    - name: Install build tools
+      # 杂鱼♡～本喵用标准pip安装构建工具喵～
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine
+        
+    - name: Build package
+      # 杂鱼♡～本喵要构建wheel和源码包喵～
+      run: |
+        python -m build
+        
+    - name: Check package
+      # 杂鱼♡～本喵要检查包的质量喵～
+      run: |
+        python -m twine check dist/*
+        
+    - name: Upload build artifacts
+      # 杂鱼♡～本喵要保存构建产物喵～
+      uses: actions/upload-artifact@v3
+      with:
+        name: python-package-distributions
+        path: dist/
+
+  publish:
+    # 杂鱼♡～本喵要发布到PyPI喵～（仅在main分支和tag时）
+    runs-on: ubuntu-latest
+    needs: [test, build]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    environment:
+      name: pypi
+      url: https://pypi.org/p/jsdc-loader
+      
+    steps:
+    - name: Download build artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: python-package-distributions
+        path: dist/
+        
+    - name: Publish to PyPI
+      # 杂鱼♡～本喵使用trusted publishing发布到PyPI喵～
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        skip-existing: true
