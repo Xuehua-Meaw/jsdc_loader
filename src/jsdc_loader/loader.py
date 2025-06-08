@@ -2,9 +2,10 @@
 
 import json
 from pathlib import Path
-from typing import Optional, Type, Union
+from typing import Optional, Type, Union, List as TypingList # Use TypingList to avoid conflict with list type
 
 from .core import T, convert_dict_to_dataclass, validate_dataclass
+from .core.compat import get_cached_origin, get_cached_args # For List[T] handling
 from .file_ops import check_file_size
 
 
@@ -40,21 +41,15 @@ def jsdc_load(
     if max_file_size is not None:
         check_file_size(str(path), max_file_size)
 
-    # 验证目标类喵～
-    validate_dataclass(target_class)
+    # 杂鱼♡～目标类验证现在移到 jsdc_loads 中了喵～
 
     try:
         with path.open("r", encoding=encoding) as f:
-            json_data = json.load(f)
-
-        # 如果数据为空，杂鱼肯定是犯了错误喵～
-        if not json_data:
-            raise ValueError("杂鱼♡～JSON数据为空喵！～")
-
-        # 转换数据为目标类型喵～
-        return convert_dict_to_dataclass(json_data, target_class)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"杂鱼♡～无效的JSON喵：{str(e)}～")
+            # 杂鱼♡～直接调用 jsdc_loads 处理字符串内容喵～
+            # 这样逻辑更统一，而且 jsdc_loads 会处理 List[T] 的情况喵～
+            return jsdc_loads(f.read(), target_class)
+    # 杂鱼♡～json.JSONDecodeError 和 ValueError (empty json_str) 已经在 jsdc_loads 中处理了喵～
+    # 只需要处理文件相关的特定异常喵～
     except UnicodeDecodeError as e:
         raise ValueError(
             f"杂鱼♡～用{encoding}解码失败喵：{str(e)}～杂鱼是不是编码搞错了？～"
@@ -80,18 +75,44 @@ def jsdc_loads(json_str: str, target_class: Type[T]) -> T:
     if not json_str:
         raise ValueError("杂鱼♡～JSON字符串为空喵！～")
 
-    # 验证目标类喵～
-    validate_dataclass(target_class)
-
     try:
         json_data = json.loads(json_str)
 
-        # 如果数据为空，杂鱼肯定是犯了错误喵～
-        if not json_data:
-            raise ValueError("杂鱼♡～JSON数据为空喵！～")
+        # 如果数据为空 (例如 "null", "[]", "{}")，对于某些 target_class 这可能是有效的 (例如 Optional, List)
+        # 但 convert_dict_to_dataclass 期望一个非空字典。
+        # List[T] case will handle empty list naturally.
+        # For single object, if json_data is not a dict (e.g. null from "null"), convert_dict_to_dataclass will fail.
+        # Let's ensure json_data is not None if we are not expecting a list.
 
-        # 转换数据为目标类型喵～
-        return convert_dict_to_dataclass(json_data, target_class)
+        origin = get_cached_origin(target_class)
+        if origin is list or origin is TypingList: # Check for both list and typing.List
+            if not isinstance(json_data, list):
+                raise ValueError(
+                    f"杂鱼♡～期望列表数据喵，但得到了 {type(json_data)} 酱～"
+                )
+
+            args = get_cached_args(target_class)
+            if not args:
+                raise TypeError("杂鱼♡～List[T] 中的类型参数T未指定喵！～")
+            item_class = args[0]
+            validate_dataclass(item_class) # Validate the item_class (e.g., T in List[T])
+
+            # 杂鱼♡～本喵要开始转换列表中的每个项目了喵～
+            # 如果json_data是空列表，这里会正确返回空列表喵～
+            return [
+                convert_dict_to_dataclass(item, item_class) for item in json_data
+            ]
+        else:
+            # 杂鱼♡～对于单个对象，还是用老方法喵～
+            validate_dataclass(target_class) # Validate the target_class itself
+            if not json_data and json_data is not None : # Allow None to be handled by Union/Optional in convert_value
+                 # convert_dict_to_dataclass expects a dict, so empty string "" -> json.loads("") error
+                 # "null" -> None. "[]", "{}" are not suitable for single dataclass.
+                 # This check might be too strict or needs refinement based on how convert_dict_to_dataclass handles non-dict.
+                 # For now, if it's not a list and json_data is falsey (but not None), raise.
+                raise ValueError("杂鱼♡～单个对象的JSON数据不能为空字典或空列表喵！～")
+            return convert_dict_to_dataclass(json_data, target_class)
+
     except json.JSONDecodeError as e:
         raise ValueError(f"杂鱼♡～无效的JSON喵：{str(e)}～")
     except Exception as e:

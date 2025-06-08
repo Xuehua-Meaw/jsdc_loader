@@ -86,3 +86,43 @@ def warn_pydantic_feature(feature_name: str) -> None:
             UserWarning,
             stacklevel=3,
         )
+
+
+# 杂鱼♡～类型相关函数的缓存版本喵～
+from typing import Tuple
+from typing import get_args as typing_get_args
+from typing import get_origin as typing_get_origin
+
+from .types import _GET_ARGS_CACHE, _GET_ORIGIN_CACHE
+
+
+def get_cached_origin(type_hint: Any) -> Optional[Any]:
+    """杂鱼♡～本喵帮你从缓存中获取类型的 origin 喵～"""
+    try:
+        if type_hint in _GET_ORIGIN_CACHE:
+            return _GET_ORIGIN_CACHE[type_hint]
+    except TypeError:  # 杂鱼♡～如果 type_hint 不能哈希，就直接调用原始函数喵～
+        return typing_get_origin(type_hint)
+
+    origin = typing_get_origin(type_hint)
+    try:
+        _GET_ORIGIN_CACHE[type_hint] = origin
+    except TypeError:  # 杂鱼♡～如果 type_hint 不能哈希，就不缓存了喵～
+        pass
+    return origin
+
+
+def get_cached_args(type_hint: Any) -> Tuple[Any, ...]:
+    """杂鱼♡～本喵帮你从缓存中获取类型的 args 喵～"""
+    try:
+        if type_hint in _GET_ARGS_CACHE:
+            return _GET_ARGS_CACHE[type_hint]
+    except TypeError:  # 杂鱼♡～如果 type_hint 不能哈希，就直接调用原始函数喵～
+        return typing_get_args(type_hint)
+
+    args = typing_get_args(type_hint)
+    try:
+        _GET_ARGS_CACHE[type_hint] = args
+    except TypeError:  # 杂鱼♡～如果 type_hint 不能哈希，就不缓存了喵～
+        pass
+    return args

@@ -2,9 +2,16 @@
 
 from dataclasses import is_dataclass
 from enum import Enum
-from typing import Any, Dict, List, Set, Tuple, Type, Union, get_args, get_origin
+from typing import Any, Dict, List, Set, Tuple, Type, Union
 
-from .compat import is_pydantic_model
+from .compat import (
+    HAS_PYDANTIC,
+    PYDANTIC_V2,
+    get_cached_args,
+    get_cached_origin,
+    is_pydantic_instance,
+    is_pydantic_model,
+)
 from .types import _TYPE_HINTS_CACHE
 
 
@@ -31,16 +38,16 @@ def validate_type(key: str, value: Any, e_type: Any) -> None:
     if e_type is Any:
         return
 
-    o_type = get_origin(e_type)
+    o_type = get_cached_origin(e_type)
 
     # 杂鱼♡～对于Union类型，本喵需要特殊处理喵～
     if o_type is Union:
         # 如果值是None且Union包含Optional（即None类型），那么就是合法的喵～
-        if value is None and type(None) in get_args(e_type):
+        if value is None and type(None) in get_cached_args(e_type):
             return
 
         # 对于非None值，我们需要检查它是否匹配Union中的任何类型喵～
-        args = get_args(e_type)
+        args = get_cached_args(e_type)
         # 杂鱼♡～这里不使用isinstance检查，而是尝试递归验证每种可能的类型喵～
         valid = False
         for arg in args:
@@ -69,7 +76,7 @@ def validate_type(key: str, value: Any, e_type: Any) -> None:
             )
 
         # 杂鱼♡～检查列表元素类型喵～
-        args = get_args(e_type)
+        args = get_cached_args(e_type)
         if args:
             element_type = args[0]
             for i, item in enumerate(value):
@@ -88,7 +95,7 @@ def validate_type(key: str, value: Any, e_type: Any) -> None:
             )
 
         # 杂鱼♡～检查集合元素类型喵～
-        args = get_args(e_type)
+        args = get_cached_args(e_type)
         if args:
             element_type = args[0]
             for i, item in enumerate(value):
@@ -105,7 +112,7 @@ def validate_type(key: str, value: Any, e_type: Any) -> None:
             )
 
         # 杂鱼♡～检查字典键和值的类型喵～
-        args = get_args(e_type)
+        args = get_cached_args(e_type)
         if len(args) == 2:
             key_type, val_type = args
             for k, v in value.items():
@@ -126,7 +133,7 @@ def validate_type(key: str, value: Any, e_type: Any) -> None:
                 f"杂鱼♡～键{key}的类型无效喵：期望tuple，得到{type(value)}～真是个笨蛋呢～"
             )
 
-        args = get_args(e_type)
+        args = get_cached_args(e_type)
         if not args:
             # 无类型参数的元组，只检查是否为元组类型
             pass
@@ -164,6 +171,55 @@ def validate_type(key: str, value: Any, e_type: Any) -> None:
             )
 
     # 杂鱼♡～对于简单类型，直接使用isinstance喵～
+    # 杂鱼♡～但在这之前，本喵要先处理 dataclass 和 Pydantic 模型实例的字段验证喵～
+    elif is_dataclass(e_type):
+        if not isinstance(value, e_type):
+            raise TypeError(
+                f"杂鱼♡～键{key}的类型无效喵：期望dataclass {e_type.__name__}，得到{type(value)}～"
+            )
+        # 杂鱼♡～递归验证dataclass的每个字段喵～
+        t_hints = get_cached_type_hints(e_type)
+        for field_name, field_type in t_hints.items():
+            # 杂鱼♡～使用 try-except getattr 以防字段在某些情况下不存在喵 (尽管对于标准dataclass实例不太可能)
+            try:
+                field_value = getattr(value, field_name)
+            except AttributeError:
+                # 杂鱼♡～如果dataclass实例没有某个字段 (理论上不应该发生)，就当作验证失败喵～
+                raise TypeError(
+                    f"杂鱼♡～Dataclass {e_type.__name__} 实例缺少字段 {field_name} 喵！～"
+                )
+            validate_type(f"{key}.{field_name}", field_value, field_type)
+
+    elif HAS_PYDANTIC and is_pydantic_model(e_type):
+        if not is_pydantic_instance(value) or not isinstance(value, e_type):
+            raise TypeError(
+                f"杂鱼♡～键{key}的类型无效喵：期望Pydantic模型 {e_type.__name__}，得到{type(value)}～"
+            )
+
+        # 杂鱼♡～递归验证Pydantic模型的每个字段喵～
+        fields_to_check = {}
+        if PYDANTIC_V2:
+            fields_to_check = {
+                name: field_info.annotation
+                for name, field_info in value.model_fields.items()
+            }
+        else: # Pydantic V1
+            fields_to_check = {
+                name: field.outer_type_
+                for name, field in value.__fields__.items()
+            }
+
+        for field_name, field_type in fields_to_check.items():
+            # 杂鱼♡～使用 try-except getattr 以防字段在某些情况下不存在喵
+            try:
+                field_value = getattr(value, field_name)
+            except AttributeError:
+                 # 杂鱼♡～如果Pydantic实例没有某个字段 (理论上不应该发生)，就当作验证失败喵～
+                raise TypeError(
+                    f"杂鱼♡～Pydantic模型 {e_type.__name__} 实例缺少字段 {field_name} 喵！～"
+                )
+            validate_type(f"{key}.{field_name}", field_value, field_type)
+
     else:
         # 对于Enum类型，我们需要特殊处理喵～
         if isinstance(e_type, type) and issubclass(e_type, Enum):
