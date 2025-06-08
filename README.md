@@ -10,11 +10,13 @@ JSDC Loader是一个功能强大的库，用于在JSON和Python数据类（datac
 - 支持Pydantic的BaseModel类喵～
 - 支持Set、Tuple等复杂容器类型～
 - 支持复杂类型（datetime、UUID、Decimal等）～
-- 高性能序列化和反序列化，即使对于大型JSON也很快喵♡～
-- 完善的类型验证和错误处理，本喵帮杂鱼处理好了一切～
+- 高性能序列化和反序列化，内部使用 orjson 带来极致速度喵，即使对于大型JSON也很快喵♡～
+- 更严格的序列化时类型检查，确保数据在转换前的类型正确性喵～ (完善的类型验证和错误处理，本喵帮杂鱼处理好了一切～)
 - Optional/Union类型支持，杂鱼可以放心使用喵～
 - 支持冻结（frozen）数据类，让杂鱼的数据不可变～
 - 支持继承关系的数据类，层次结构也没问题喵♡～
+- 支持UUID作为字典键，满足更多特殊需求喵～
+- 直接支持顶层列表对象的序列化与反序列化喵～
 
 ## 安装方法
 
@@ -285,9 +287,42 @@ assert loaded.unicode_chars == "你好，世界！😊🐱👍"
 assert loaded.json_syntax == "{\"key\": [1, 2]}"
 ```
 
+### 处理顶层列表对象喵～
+
+```python
+# 杂鱼♡～本喵还能直接处理顶层是列表的数据对象喵～
+from dataclasses import dataclass
+from typing import List
+from jsdc_loader import jsdc_dumps, jsdc_loads
+
+@dataclass
+class ListItem:
+    id: int
+    name: str
+
+# 创建一个列表的实例喵～
+list_of_items = [ListItem(id=1, name="item1"), ListItem(id=2, name="item2")]
+
+# 序列化列表到JSON字符串，看本喵操作喵～
+json_list_str = jsdc_dumps(list_of_items)
+print(json_list_str)
+# 输出会是: [{"id": 1, "name": "item1"}, {"id": 2, "name": "item2"}] (如果 indent=None 或紧凑模式)
+
+# 从JSON字符串反序列化回列表对象，简单吧杂鱼～
+loaded_list_of_items = jsdc_loads(json_list_str, List[ListItem])
+assert len(loaded_list_of_items) == 2
+assert loaded_list_of_items[0].name == "item1"
+print(f"第一个项目名称: {loaded_list_of_items[0].name}喵～")
+```
+
 ### 性能优化
 
-JSDC Loader经过性能优化，即使处理大型结构也能保持高效喵♡～。杂鱼主人可以放心使用，本喵已经做了充分的性能测试喵～。
+JSDC Loader 内部使用 `orjson` 库进行核心JSON处理，带来了显著的性能提升喵♡～。杂鱼主人可以放心使用，本喵已经做了充分的性能测试喵～。
+
+**关于缩进参数 `indent` 的小提示喵～：**
+当使用 `jsdc_dumps` 或 `jsdc_dump` 并指定 `indent` 参数进行格式化输出时：
+- 如果 `indent` 为 `None` 或 `0`，将输出紧凑的JSON喵～。
+- 如果 `indent` 为一个正整数（例如 `2`, `4` 等），`jsdc_loader` 会利用 `orjson` 的 `OPT_INDENT_2` 选项，产生带有2个空格缩进的格式化JSON喵～。这意味着无论指定哪个正整数作为缩进级别，实际输出都会是2空格缩进喵～。这是为了兼顾格式化和 `orjson` 的性能优势所做的平衡喵～。
 
 ## 错误处理
 
