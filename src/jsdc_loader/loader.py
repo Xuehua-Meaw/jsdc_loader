@@ -2,16 +2,17 @@
 
 import json
 import os
-from typing import Type, Optional
+from pathlib import Path
+from typing import Type, Optional, Union
 
 from .core import T, convert_dict_to_dataclass, validate_dataclass
 from .file_ops import check_file_size
 
-def jsdc_load(file_path: str, target_class: Type[T], encoding: str = 'utf-8', max_file_size: Optional[int] = None) -> T:
+def jsdc_load(file_path: Union[str, Path], target_class: Type[T], encoding: str = 'utf-8', max_file_size: Optional[int] = None) -> T:
     """杂鱼♡～本喵帮你从JSON文件加载数据并转换为指定的dataclass或Pydantic模型喵～
 
     Args:
-        file_path (str): JSON文件的路径喵～杂鱼要保证路径正确哦～
+        file_path (Union[str, Path]): JSON文件的路径喵～杂鱼现在可以用字符串或Path对象了♡～
         target_class (Type[T]): 目标dataclass或Pydantic模型类喵～
         encoding (str, optional): 文件编码，默认'utf-8'喵～
         max_file_size (Optional[int], optional): 最大文件大小（字节）喵～为None表示不限制～
@@ -24,18 +25,21 @@ def jsdc_load(file_path: str, target_class: Type[T], encoding: str = 'utf-8', ma
         ValueError: 如果文件内容无效或太大喵～杂鱼的数据有问题吧～
         TypeError: 如果target_class不是dataclass或BaseModel，杂鱼肯定传错类型了～
     """
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"杂鱼♡～文件不存在喵：{file_path}～")
+    # 杂鱼♡～本喵现在支持Path对象了喵～
+    path = Path(file_path)
+    
+    if not path.exists():
+        raise FileNotFoundError(f"杂鱼♡～文件不存在喵：{path}～")
     
     # 检查文件大小喵～
     if max_file_size is not None:
-        check_file_size(file_path, max_file_size)
+        check_file_size(str(path), max_file_size)
     
     # 验证目标类喵～
     validate_dataclass(target_class)
     
     try:
-        with open(file_path, 'r', encoding=encoding) as f:
+        with path.open('r', encoding=encoding) as f:
             json_data = json.load(f)
             
         # 如果数据为空，杂鱼肯定是犯了错误喵～

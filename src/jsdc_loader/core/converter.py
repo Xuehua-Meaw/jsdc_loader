@@ -3,13 +3,13 @@
 from typing import Any, Type, get_args, get_origin, Union
 from dataclasses import is_dataclass
 from enum import Enum
-from pydantic import BaseModel
 import datetime
 import uuid
 from decimal import Decimal
 
 from .types import T
 from .validator import get_cached_type_hints, validate_type
+from .compat import is_pydantic_model, is_pydantic_instance, create_pydantic_from_dict, pydantic_to_dict
 
 def convert_enum(key: str, value: Any, enum_type: Type[Enum]) -> Enum:
     """Convert a string value to an Enum member."""
@@ -25,10 +25,26 @@ def convert_union_type(key: str, value: Any, union_type: Any) -> Any:
     # 杂鱼♡～处理None值喵～
     if value is None and type(None) in args:
         return None
-        
-    # 尝试所有可能的类型转换，直到成功喵～
+    
+    # 杂鱼♡～首先尝试精确类型匹配，这样可以避免不必要的类型转换喵～
     for arg_type in args:
         if arg_type is type(None):
+            continue
+            
+        # 杂鱼♡～检查是否是精确的类型匹配喵～
+        if _is_exact_type_match(value, arg_type):
+            try:
+                return convert_value(key, value, arg_type)
+            except (ValueError, TypeError):
+                continue
+    
+    # 杂鱼♡～如果没有精确匹配，再尝试类型转换喵～
+    for arg_type in args:
+        if arg_type is type(None):
+            continue
+            
+        # 杂鱼♡～跳过已经尝试过的精确匹配喵～
+        if _is_exact_type_match(value, arg_type):
             continue
             
         try:
@@ -38,6 +54,42 @@ def convert_union_type(key: str, value: Any, union_type: Any) -> Any:
             
     # 如果所有转换都失败，则抛出错误喵～
     raise TypeError(f'杂鱼♡～无法将键{key}的值{value}转换为{union_type}喵！～')
+
+def _is_exact_type_match(value: Any, expected_type: Any) -> bool:
+    """杂鱼♡～检查值是否与期望类型精确匹配喵～"""
+    # 杂鱼♡～处理基本类型喵～
+    if expected_type in (int, float, str, bool):
+        return type(value) is expected_type
+    
+    # 杂鱼♡～处理容器类型喵～
+    origin = get_origin(expected_type)
+    if origin is list:
+        return isinstance(value, list)
+    elif origin is dict:
+        return isinstance(value, dict)
+    elif origin is set:
+        return isinstance(value, set)
+    elif origin is tuple:
+        return isinstance(value, tuple)
+    elif expected_type is list:
+        return isinstance(value, list)
+    elif expected_type is dict:
+        return isinstance(value, dict)
+    elif expected_type is set:
+        return isinstance(value, set)
+    elif expected_type is tuple:
+        return isinstance(value, tuple)
+    
+    # 杂鱼♡～处理dataclass类型喵～
+    if is_dataclass(expected_type):
+        return isinstance(value, expected_type)
+    
+    # 杂鱼♡～处理Enum类型喵～
+    if isinstance(expected_type, type) and issubclass(expected_type, Enum):
+        return isinstance(value, expected_type)
+    
+    # 杂鱼♡～其他情况返回False，让转换逻辑处理喵～
+    return False
 
 def convert_simple_type(key: str, value: Any, e_type: Any) -> Any:
     """Convert a value to a simple type."""
@@ -80,12 +132,46 @@ def convert_dict_type(key: str, value: dict, e_type: Any) -> dict:
     """Convert a dictionary based on its type annotation."""
     if get_origin(e_type) is dict:
         key_type, val_type = get_args(e_type)
-        if key_type != str:
-            raise ValueError(f"Only string keys are supported for dictionaries in key {key}")
         
-        # If the value type is complex, process each item
-        if is_dataclass(val_type) or get_origin(val_type) is Union:
-            return {k: convert_value(f"{key}.{k}", v, val_type) for k, v in value.items()}
+        # 杂鱼♡～本喵扩展支持更多键类型了喵～
+        # 支持字符串、整数、浮点数等基本类型作为键
+        supported_key_types = (str, int, float, bool)
+        if key_type not in supported_key_types:
+            raise ValueError(f"杂鱼♡～字典键类型 {key_type} 暂不支持喵！支持的键类型: {supported_key_types}～")
+        
+        # 杂鱼♡～如果键类型不是字符串，需要转换JSON中的字符串键为目标类型喵～
+        converted_dict = {}
+        for k, v in value.items():
+            # 杂鱼♡～JSON中的键总是字符串，需要转换为目标键类型喵～
+            if key_type == str:
+                converted_key = k
+            elif key_type == int:
+                try:
+                    converted_key = int(k)
+                except ValueError:
+                    raise ValueError(f"杂鱼♡～无法将键 '{k}' 转换为整数喵！～")
+            elif key_type == float:
+                try:
+                    converted_key = float(k)
+                except ValueError:
+                    raise ValueError(f"杂鱼♡～无法将键 '{k}' 转换为浮点数喵！～")
+            elif key_type == bool:
+                if k.lower() in ('true', '1'):
+                    converted_key = True
+                elif k.lower() in ('false', '0'):
+                    converted_key = False
+                else:
+                    raise ValueError(f"杂鱼♡～无法将键 '{k}' 转换为布尔值喵！～")
+            else:
+                converted_key = k  # 杂鱼♡～其他情况保持原样喵～
+            
+            # 杂鱼♡～转换值喵～
+            if is_dataclass(val_type) or get_origin(val_type) is Union:
+                converted_dict[converted_key] = convert_value(f"{key}.{k}", v, val_type)
+            else:
+                converted_dict[converted_key] = v
+                
+        return converted_dict
     
     # Default case, just return the dict
     return value
@@ -133,10 +219,14 @@ def convert_value(key: str, value: Any, e_type: Any) -> Any:
         return convert_enum(key, value, e_type)
     elif is_dataclass(e_type):
         return convert_dict_to_dataclass(value, e_type)
+    elif is_pydantic_model(e_type):
+        # 杂鱼♡～处理 Pydantic 模型喵～
+        return create_pydantic_from_dict(e_type, value)
     elif get_origin(e_type) is list or e_type == list:
         args = get_args(e_type)
-        if args and is_dataclass(args[0]):
-            return [convert_dict_to_dataclass(item, args[0]) for item in value]
+        if args and (is_dataclass(args[0]) or is_pydantic_model(args[0])):
+            return [convert_dict_to_dataclass(item, args[0]) if is_dataclass(args[0]) 
+                   else create_pydantic_from_dict(args[0], item) for item in value]
         elif args:
             return [convert_value(f"{key}[{i}]", item, args[0]) for i, item in enumerate(value)]
         return value
@@ -159,12 +249,9 @@ def convert_dict_to_dataclass(data: dict, cls: T) -> T:
     if not data:
         raise ValueError("Empty data dictionary")
         
-    if issubclass(cls, BaseModel):
-        # // 杂鱼♡～Pydantic V2 不应该再使用 parse_obj 喵，而是使用 model_validate 喵～
-        if hasattr(cls, "model_validate"):
-            return cls.model_validate(data)
-        else:
-            return cls.parse_obj(data)
+    if is_pydantic_model(cls):
+        # 杂鱼♡～使用兼容层来创建 Pydantic 模型喵～
+        return create_pydantic_from_dict(cls, data)
     
     # // 杂鱼♡～如果是frozen dataclass，本喵就使用构造函数来创建实例，而不是先创建再赋值喵～
     if is_frozen_dataclass(cls):
@@ -217,12 +304,9 @@ def convert_dataclass_to_dict(obj: Any, parent_key: str = "", parent_type: Any =
         # 杂鱼♡～对于元组，转换为列表返回喵～
         return [convert_dataclass_to_dict(item, f"{parent_key}[]", get_args(parent_type)[0] if parent_type and get_args(parent_type) else None) for item in obj]
     
-    if isinstance(obj, BaseModel):
-        # // 杂鱼♡～Pydantic V2 用 model_dump() 喵～不是 dict() 喵～
-        if hasattr(obj, "model_dump"):
-            return obj.model_dump()
-        else:
-            return obj.dict()
+    if is_pydantic_instance(obj):
+        # 杂鱼♡～使用兼容层来转换 Pydantic 实例喵～
+        return pydantic_to_dict(obj)
     elif isinstance(obj, Enum):
         return obj.name
     # // 杂鱼♡～本喵在这里加了一个 elif，如果遇到 set，就把它变成 list 喵！～
@@ -287,8 +371,11 @@ def convert_dataclass_to_dict(obj: Any, parent_key: str = "", parent_type: Any =
                     validate_type(val_key, v, val_type)
                 except (TypeError, ValueError) as e:
                     raise TypeError(f"杂鱼♡～序列化时字典值类型验证失败喵：{val_key} {str(e)}～")
-                    
-            result[k] = convert_dataclass_to_dict(v, f"{parent_key}[{k}]", val_type)
+            
+            # 杂鱼♡～将键转换为字符串以支持JSON序列化喵～
+            # JSON只支持字符串键，所以本喵需要将其他类型的键转换为字符串～
+            json_key = str(k)
+            result[json_key] = convert_dataclass_to_dict(v, f"{parent_key}[{k}]", val_type)
             
         return result
     elif is_dataclass(obj):
