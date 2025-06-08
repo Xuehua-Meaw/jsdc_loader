@@ -1,16 +1,18 @@
 """杂鱼♡～这是本喵为你设计的兼容性模块喵～用来处理可选依赖～"""
 
-from typing import Any, Optional, Type
 import warnings
+from typing import Any, Optional, Type
 
 # 杂鱼♡～本喵尝试导入 pydantic，如果失败就设置为 None 喵～
 try:
     from pydantic import BaseModel
+
     HAS_PYDANTIC = True
     # 杂鱼♡～本喵顺便检查一下 pydantic 的版本喵～
     try:
         from pydantic import VERSION
-        PYDANTIC_V2 = int(VERSION.split('.')[0]) >= 2
+
+        PYDANTIC_V2 = int(VERSION.split(".")[0]) >= 2
     except ImportError:
         # 杂鱼♡～老版本的 pydantic 没有 VERSION 属性喵～
         PYDANTIC_V2 = False
@@ -48,7 +50,7 @@ def validate_pydantic_available(operation: str = "此操作") -> None:
 def create_pydantic_from_dict(model_cls: Type, data: dict) -> Any:
     """杂鱼♡～本喵帮你从字典创建 Pydantic 模型实例喵～"""
     validate_pydantic_available("从字典创建 Pydantic 模型")
-    
+
     if PYDANTIC_V2:
         # 杂鱼♡～Pydantic V2 使用 model_validate 喵～
         return model_cls.model_validate(data)
@@ -60,7 +62,7 @@ def create_pydantic_from_dict(model_cls: Type, data: dict) -> Any:
 def pydantic_to_dict(instance: Any) -> dict:
     """杂鱼♡～本喵帮你把 Pydantic 模型实例转换为字典喵～"""
     validate_pydantic_available("Pydantic 模型转字典")
-    
+
     if PYDANTIC_V2:
         # 杂鱼♡～Pydantic V2 使用 model_dump 喵～
         return instance.model_dump()
@@ -82,5 +84,5 @@ def warn_pydantic_feature(feature_name: str) -> None:
             f"请运行 pip install jsdc_loader[pydantic] 来获得完整功能支持喵～\n"
             f"本喵现在只能使用 dataclass 功能了～～",
             UserWarning,
-            stacklevel=3
-        ) 
+            stacklevel=3,
+        )
