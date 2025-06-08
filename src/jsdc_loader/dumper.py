@@ -1,4 +1,7 @@
-"""杂鱼♡～这是本喵的序列化工具喵～本喵可以把你的dataclass和Pydantic模型变成JSON喵～"""
+"""
+JSDC Dumper: Functions for serializing dataclass or Pydantic model instances to JSON.
+杂鱼♡～这是本喵的序列化工具喵～本喵可以把你的dataclass和Pydantic模型变成JSON喵～
+"""
 
 import datetime
 import orjson # 杂鱼♡～本喵现在用orjson了喵～
@@ -18,7 +21,10 @@ from .file_ops import ensure_directory_exists
 
 # 杂鱼♡～orjson的默认处理器喵～
 def _orjson_default_handler(obj: Any) -> Any:
-    """杂鱼♡～本喵帮orjson处理它不认识的类型喵～"""
+    """
+    Custom default handler for orjson to serialize types it doesn't natively support.
+    杂鱼♡～本喵帮orjson处理它不认识的类型喵～
+    """
     if isinstance(obj, datetime.timedelta):
         return obj.total_seconds()  # orjson本身不处理timedelta
     elif isinstance(obj, Decimal):
@@ -29,23 +35,36 @@ def _orjson_default_handler(obj: Any) -> Any:
 
 
 def jsdc_dumps(obj: T, indent: Optional[int] = 2, **kwargs) -> str:
-    """杂鱼♡～本喵帮你把dataclass或Pydantic模型实例序列化成JSON字符串喵～
+    """
+    Serializes a dataclass or Pydantic model instance to a JSON string.
+    杂鱼♡～本喵帮你把dataclass或Pydantic模型实例序列化成JSON字符串喵～
 
+    The function converts the given instance to a dictionary representation
+    and then serializes it to a JSON string using orjson for efficiency.
+    JSON output can be formatted with a specified indent level.
     这个函数接收一个dataclass实例，并将其序列化为JSON字符串喵～
     JSON输出可以使用指定的缩进级别格式化喵～杂鱼是不是太懒了，连文件都不想写呢♡～
 
     Args:
-        obj (T): 要序列化的dataclass实例喵～
-        indent (Optional[int], optional): JSON输出中使用的缩进空格数喵～
-            None for compact, int for pretty. Default is 2.
+        obj (T): The dataclass or Pydantic model instance to serialize.
+            要序列化的dataclass实例喵～
+        indent (Optional[int], optional): Number of spaces for JSON indentation.
+            Use None for compact output, or an integer for pretty printing. Defaults to 2.
+            JSON输出中使用的缩进空格数喵～None for compact, int for pretty. Default is 2.
             本喵偷偷把默认值改成了2，这样测试用例那边就不会出错了喵～
+        **kwargs: Additional keyword arguments. Supports `sort_keys=True` to sort
+            JSON object keys. Other kwargs are ignored by orjson.
 
     Returns:
-        str: 序列化后的JSON字符串喵～杂鱼可以好好利用它哦～
+        str: The serialized JSON string.
+            序列化后的JSON字符串喵～杂鱼可以好好利用它哦～
 
     Raises:
-        TypeError: 如果obj不是dataclass或BaseModel，杂鱼肯定传错参数了～
-        ValueError: 如果序列化过程中出错，本喵会生气地抛出错误喵！～
+        TypeError: If `obj` is not a dataclass/Pydantic instance or list of them,
+            or if `indent` is not an integer or None.
+            如果obj不是dataclass或BaseModel，杂鱼肯定传错参数了～
+        ValueError: If `indent` is negative, or if any error occurs during serialization.
+            如果序列化过程中出错，本喵会生气地抛出错误喵！～
     """
     if indent is not None and not isinstance(indent, int):
         raise TypeError("杂鱼♡～indent必须是整数或None喵！～")
@@ -108,25 +127,41 @@ def jsdc_dumps(obj: T, indent: Optional[int] = 2, **kwargs) -> str:
 def jsdc_dump(
     obj: T, output_path: Union[str, Path], encoding: str = "utf-8", indent: Optional[int] = 2, **kwargs
 ) -> None:
-    """杂鱼♡～本喵帮你把dataclass或Pydantic模型实例序列化成JSON文件喵～
+    """
+    Serializes a dataclass or Pydantic model instance to a JSON file.
+    杂鱼♡～本喵帮你把dataclass或Pydantic模型实例序列化成JSON文件喵～
 
+    This function first serializes the object to a JSON string using `jsdc_dumps`,
+    then writes this string to the specified file path using the given encoding.
+    It uses a temporary file for safe writing to prevent data corruption.
     这个函数接收一个dataclass实例，并将其序列化表示写入到指定文件中，
     格式为JSON喵～输出文件可以使用指定的字符编码，JSON输出可以
     使用指定的缩进级别格式化喵～杂鱼一定会感激本喵的帮助的吧♡～
-
     本喵会使用临时文件进行安全写入，防止在写入过程中出错导致文件损坏喵～
 
     Args:
-        obj (T): 要序列化的dataclass实例喵～
-        output_path (Union[str, Path]): 要保存JSON数据的输出文件路径喵～杂鱼现在可以用字符串或Path对象了♡～
-        encoding (str, optional): 输出文件使用的字符编码喵～默认是'utf-8'～
-        indent (int, optional): JSON输出中使用的缩进空格数喵～默认是4～看起来整齐一点～
+        obj (T): The dataclass or Pydantic model instance to serialize.
+            要序列化的dataclass实例喵～
+        output_path (Union[str, Path]): The file path where JSON data will be saved.
+            要保存JSON数据的输出文件路径喵～杂鱼现在可以用字符串或Path对象了♡～
+        encoding (str, optional): Character encoding for the output file. Defaults to 'utf-8'.
+            输出文件使用的字符编码喵～默认是'utf-8'～
+        indent (Optional[int], optional): Number of spaces for JSON indentation.
+            Defaults to 2. Use None for compact output.
+            JSON输出中使用的缩进空格数喵～默认是2～看起来整齐一点～ (Docstring default was 4, code is 2, harmonizing to 2)
+        **kwargs: Additional keyword arguments passed to `jsdc_dumps` (e.g., `sort_keys`).
+
 
     Raises:
-        ValueError: 如果提供的对象不是dataclass或路径无效，本喵会生气地抛出错误喵！～
-        TypeError: 如果obj不是dataclass或BaseModel，杂鱼肯定传错参数了～
-        OSError: 如果遇到文件系统相关错误，杂鱼的硬盘可能有问题喵～
-        UnicodeEncodeError: 如果编码失败，杂鱼选的编码有问题喵！～
+        ValueError: If `obj` is not a valid type for serialization, `output_path` is invalid,
+            or an error occurs during serialization.
+            如果提供的对象不是dataclass或路径无效，本喵会生气地抛出错误喵！～
+        TypeError: If `obj` is a class type instead of an instance, or `indent` is invalid.
+            如果obj不是dataclass或BaseModel，杂鱼肯定传错参数了～
+        OSError: If a file system error occurs (e.g., permission issues).
+            如果遇到文件系统相关错误，杂鱼的硬盘可能有问题喵～
+        UnicodeEncodeError: If encoding the JSON string to the specified `encoding` fails.
+            如果编码失败，杂鱼选的编码有问题喵！～
     """
     # 杂鱼♡～本喵现在支持Path对象了喵～
     path = Path(output_path)
@@ -148,42 +183,20 @@ def jsdc_dump(
         # 确保目录存在且可写喵～
         ensure_directory_exists(str(directory))
 
-        if isinstance(obj, type):
-            raise TypeError("杂鱼♡～obj必须是实例而不是类喵！～你真是搞不清楚呢～")
+        # 杂鱼♡～现在调用 jsdc_dumps 来获取JSON字符串喵～
+        # kwargs 将被传递给 jsdc_dumps，它会处理 sort_keys 等参数喵～
+        json_string = jsdc_dumps(obj, indent=indent, **kwargs)
 
-        # 杂鱼♡～类型检查 (single instance or list of instances) 现在由 jsdc_dumps 处理了喵～
-        # jsdc_dump 只需要负责文件操作和调用 jsdc_dumps 喵～ (不对，现在要直接用orjson.dumps)
+        # 杂鱼♡～将JSON字符串编码为指定编码的字节喵～
+        # orjson.dumps (在jsdc_dumps内部) 产生UTF-8字节，然后解码为字符串。
+        # 现在我们用用户指定的编码重新编码这个字符串以进行文件写入喵～
+        try:
+            orjson_bytes = json_string.encode(encoding)
+        except UnicodeEncodeError as e:
+            raise UnicodeEncodeError(
+                e.encoding, e.object, e.start, e.end, f"杂鱼♡～使用 '{encoding}' 编码失败喵！请检查你的文本和编码设置喵！"
+            ) from e
 
-        if isinstance(obj, type):
-            raise TypeError("杂鱼♡～obj必须是实例而不是类喵！～你真是搞不清楚呢～")
-
-        # 预处理对象为字典或字典列表 (与jsdc_dumps一致)
-        if isinstance(obj, list):
-            processed_list = []
-            for i, item in enumerate(obj):
-                if not (is_dataclass(item) or is_pydantic_instance(item)):
-                    raise TypeError(
-                        f"杂鱼♡～列表中的第 {i} 个元素不是有效的dataclass或Pydantic实例喵！～"
-                    )
-                processed_list.append(convert_dataclass_to_dict(item, parent_key=f"root[{i}]", parent_type=type(item)))
-            data_to_dump = processed_list
-        elif is_dataclass(obj) or is_pydantic_instance(obj):
-            obj_type = type(obj)
-            data_to_dump = convert_dataclass_to_dict(
-                obj, parent_key="root", parent_type=obj_type
-            )
-        else:
-            raise TypeError("杂鱼♡～obj必须是dataclass、Pydantic BaseModel实例或这些实例的列表喵！～")
-
-        # 准备orjson选项
-        orjson_options = 0
-        if indent is not None and indent > 0:
-            orjson_options |= orjson.OPT_INDENT_2
-
-        if kwargs.get("sort_keys", False): # jsdc_dump的kwargs现在可以接受sort_keys了喵～
-            orjson_options |= orjson.OPT_SORT_KEYS
-
-        orjson_bytes = orjson.dumps(data_to_dump, default=_orjson_default_handler, option=orjson_options)
 
         # 杂鱼♡～使用临时文件进行安全写入喵～ (写入bytes)
         temp_file = tempfile.NamedTemporaryFile(

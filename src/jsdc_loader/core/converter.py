@@ -1,4 +1,8 @@
-"""Conversion utilities for JSDC Loader."""
+"""
+Core conversion utilities for JSDC Loader.
+Handles type conversions during serialization and deserialization processes.
+杂鱼♡～这是本喵的转换工具喵～各种类型转换都靠本喵了喵～
+"""
 
 import datetime
 import uuid
@@ -20,7 +24,10 @@ from .validator import get_cached_type_hints, validate_type
 
 
 def convert_enum(key: str, value: Any, enum_type: Type[Enum]) -> Enum:
-    """Convert a string value to an Enum member."""
+    """
+    Converts a value to an Enum member.
+    Typically expects `value` to be the string name of the enum member.
+    """
     try:
         return enum_type[value]
     except KeyError:
@@ -28,7 +35,10 @@ def convert_enum(key: str, value: Any, enum_type: Type[Enum]) -> Enum:
 
 
 def convert_union_type(key: str, value: Any, union_type: Any) -> Any:
-    """Convert a value to one of the Union types."""
+    """
+    Converts a value to one of the types specified in a Union.
+    It tries to match the value against each type in the Union.
+    """
     args = get_cached_args(union_type)
 
     # 杂鱼♡～处理None值喵～
@@ -66,7 +76,11 @@ def convert_union_type(key: str, value: Any, union_type: Any) -> Any:
 
 
 def _is_exact_type_match(value: Any, expected_type: Any) -> bool:
-    """杂鱼♡～检查值是否与期望类型精确匹配喵～"""
+    """
+    Checks if the value's type is an exact match to the expected_type,
+    primarily for optimization before attempting more complex conversions.
+    杂鱼♡～检查值是否与期望类型精确匹配喵～
+    """
     # 杂鱼♡～处理基本类型喵～
     if expected_type in (int, float, str, bool):
         return type(value) is expected_type
@@ -101,50 +115,132 @@ def _is_exact_type_match(value: Any, expected_type: Any) -> bool:
     # 杂鱼♡～其他情况返回False，让转换逻辑处理喵～
     return False
 
+# --- New Helper Functions for type conversion ---
+
+def _convert_datetime_like(key: str, value: Any, expected_type: Any) -> Any:
+    """
+    Handles string-to-datetime object conversions (datetime, date, time)
+    and number/dict-to-timedelta conversions.
+    """
+    if expected_type == datetime.datetime:
+        if isinstance(value, str):
+            return datetime.datetime.fromisoformat(value)
+        # Add other potential source types for datetime if necessary
+    elif expected_type == datetime.date:
+        if isinstance(value, str):
+            return datetime.date.fromisoformat(value)
+    elif expected_type == datetime.time:
+        if isinstance(value, str):
+            return datetime.time.fromisoformat(value)
+    elif expected_type == datetime.timedelta:
+        if isinstance(value, (int, float)):
+            return datetime.timedelta(seconds=value)
+        elif isinstance(value, dict):  # For {"days": 1, "seconds": 30} style
+            return datetime.timedelta(**value)
+    # If value is not a recognized type for the expected_type, fall through to raise error
+    raise ValueError(f"杂鱼♡～无法将值 '{value}' 转换为 {expected_type.__name__} 为键 {key}喵！～")
+
+
+def _convert_uuid_type(key: str, value: Any, expected_type: Type[uuid.UUID]) -> uuid.UUID:
+    """Handles string-to-UUID conversion."""
+    if isinstance(value, str):
+        try:
+            return uuid.UUID(value)
+        except ValueError:
+            raise ValueError(f"杂鱼♡～无效的UUID字符串 '{value}' 为键 {key}喵！～")
+    raise ValueError(f"杂鱼♡～无法将值 '{value}' 转换为UUID为键 {key}喵！～ (需要字符串)～")
+
+
+def _convert_decimal_type(key: str, value: Any, expected_type: Type[Decimal]) -> Decimal:
+    """Handles string/int/float-to-Decimal conversion."""
+    if isinstance(value, (str, int, float)):
+        try:
+            return Decimal(str(value))  # Convert to string first for robust Decimal conversion
+        except Exception as e: # Broad exception for Decimal conversion issues
+            raise ValueError(f"杂鱼♡～无法将值 '{value}' 转换为Decimal为键 {key}喵！错误: {e}～")
+    raise ValueError(f"杂鱼♡～无法将值 '{value}' 转换为Decimal为键 {key}喵！～ (需要字符串,整数或浮点数)～")
+
 
 def convert_simple_type(key: str, value: Any, e_type: Any) -> Any:
-    """Convert a value to a simple type."""
-    # 杂鱼♡～处理特殊类型喵～
-    if e_type is Any:
-        return value
-    elif isinstance(e_type, type) and issubclass(e_type, Enum):
-        return e_type[value]
-    elif e_type == dict or get_cached_origin(e_type) == dict:
-        # Handle dict type properly
-        return value
-    elif e_type == list or get_cached_origin(e_type) == list:
-        # Handle list type properly
-        return value
-    # 杂鱼♡～处理复杂类型喵～如日期、时间等
-    elif e_type == datetime.datetime and isinstance(value, str):
-        return datetime.datetime.fromisoformat(value)
-    elif e_type == datetime.date and isinstance(value, str):
-        return datetime.date.fromisoformat(value)
-    elif e_type == datetime.time and isinstance(value, str):
-        return datetime.time.fromisoformat(value)
-    elif e_type == datetime.timedelta and isinstance(value, (int, float)):
-        return datetime.timedelta(seconds=value)
-    elif e_type == datetime.timedelta and isinstance(value, dict):
-        return datetime.timedelta(**value)
-    elif e_type == uuid.UUID and isinstance(value, str):
-        return uuid.UUID(value)
-    elif e_type == Decimal and isinstance(value, (str, int, float)):
-        return Decimal(str(value))
+    """
+    Converts a value to a 'simple' type.
+    This includes primitives (int, str, bool, float), datetime-related types,
+    UUID, and Decimal. It acts as a fallback converter for types not handled
+    by more specific converters in the main `convert_value` dispatcher.
+    """
+    # Dispatch to specialized handlers for known complex simple types
+    if e_type == datetime.datetime or e_type == datetime.date or e_type == datetime.time or e_type == datetime.timedelta:
+        return _convert_datetime_like(key, value, e_type)
+    elif e_type == uuid.UUID:
+        return _convert_uuid_type(key, value, e_type)
+    elif e_type == Decimal:
+        return _convert_decimal_type(key, value, e_type)
+    # Fallback for basic types (int, float, str, bool) and other direct constructions
     else:
         try:
             return e_type(value)
-        except TypeError:
-            # If it's a typing.Dict or typing.List, just return the value
-            if str(e_type).startswith("typing."):
-                return value
-            raise
+        except (TypeError, ValueError) as e: # Catch ValueError for things like int("abc")
+            # This error message is now more generic as specific type errors are caught by helpers
+            raise TypeError(f"杂鱼♡～无法将键 '{key}' 的值 '{value}' (类型 {type(value).__name__}) 转换为类型 {e_type.__name__}喵！原始错误: {e}～")
+
+
+def _convert_list_type(key: str, value: Any, e_type: Any) -> list:
+    """
+    Handles conversion for list types. If the list is typed (e.g., List[MyClass]),
+    it recursively calls `convert_value` for each item.
+    """
+    if not isinstance(value, list):
+        # If list is expected but not provided, this is a type error.
+        # Unless e_type is just 'list' (not List[T]) and we want to allow non-list values?
+        # Current logic: convert_value's main dispatcher only calls this if isinstance(value, list)
+        # for List[T]. If e_type is plain 'list', it also comes here.
+        # If e_type is 'list' and value is not a list, convert_simple_type would try list(value).
+        # For consistency, if e_type implies a list structure, value should be a list.
+        raise TypeError(f"杂鱼♡～期望列表但得到 {type(value).__name__} 为键 {key}喵！～")
+
+    args = get_cached_args(e_type)
+    if args:  # Handles List[T]
+        element_type = args[0]
+        if is_dataclass(element_type):
+            return [convert_dict_to_dataclass(item_val, element_type) for item_val in value]
+        elif is_pydantic_model(element_type):
+            return [create_pydantic_from_dict(element_type, item_val) for item_val in value]
+        else:
+            return [convert_value(f"{key}[{i}]", item_val, element_type) for i, item_val in enumerate(value)]
+    return value # For plain 'list' expected_type or List without type args, return as is.
+
+
+def _convert_set_type(key: str, value: list, e_type: Any) -> set:
+    """
+    Handles conversion for set types from a list input. If the set is typed
+    (e.g., Set[MyClass]), it recursively calls `convert_value` for each item.
+    """
+    # Assumes value is a list, as per the check in the dispatcher (convert_value)
+    args = get_cached_args(e_type)
+    if args:  # Handles Set[T]
+        element_type = args[0]
+        return {convert_value(f"{key}[*]", item, element_type) for item in value}
+    return set(value) # For plain 'set' or Set without type args
 
 
 def convert_dict_type(key: str, value: dict, e_type: Any) -> dict:
-    """Convert a dictionary based on its type annotation."""
-    if get_cached_origin(e_type) is dict:
+    """
+    Converts a dictionary's keys and/or values based on its type annotation (e.g., Dict[int, MyClass]).
+    JSON keys are always strings, so this function handles conversion of string keys
+    to other supported primitive types if specified in `e_type`.
+    """
+    # Ensure value is a dict before processing
+    if not isinstance(value, dict):
+        raise TypeError(f"杂鱼♡～期望字典但得到 {type(value).__name__} 为键 {key}喵！～")
+
+    origin = get_cached_origin(e_type)
+    # Handles plain 'dict' or Dict without type args
+    if e_type is dict and not origin: # e_type is literally <class 'dict'>
+         return value
+
+    if origin is dict: # Handles Dict[K, V]
         args = get_cached_args(e_type)
-        if not args: # Should not happen for Dict[K,V] but good for robustness
+        if not args: # Should imply plain dict, return value
             return value
         key_type, val_type = args
 
@@ -202,7 +298,11 @@ def convert_dict_type(key: str, value: dict, e_type: Any) -> dict:
 
 
 def convert_tuple_type(key: str, value: list, e_type: Any) -> tuple:
-    """杂鱼♡～本喵帮你把列表转换成元组喵～"""
+    """
+    Converts a list (typically from JSON array) to a tuple, handling typed tuples.
+    For Tuple[X, ...] or Tuple[X, Y, Z], recursively calls `convert_value` for items.
+    杂鱼♡～本喵帮你把列表转换成元组喵～
+    """
     if get_cached_origin(e_type) is tuple:
         args = get_cached_args(e_type)
         if len(args) == 2 and args[1] is Ellipsis:  # Tuple[X, ...]
@@ -226,7 +326,11 @@ def convert_tuple_type(key: str, value: list, e_type: Any) -> tuple:
 
 
 def convert_value(key: str, value: Any, e_type: Any) -> Any:
-    """Convert a value to the expected type."""
+    """
+    Main dispatcher function to convert a value to the expected type `e_type`.
+    It delegates to specialized conversion functions based on `e_type`.
+    This is used during deserialization.
+    """
     # 杂鱼♡～处理None值和Any类型喵～
     if value is None and (
         e_type is Any
@@ -238,67 +342,52 @@ def convert_value(key: str, value: Any, e_type: Any) -> Any:
     if e_type is Any:
         return value
 
-    # // 杂鱼♡～本喵在这里加了一段逻辑，如果期望的是 set 但得到的是 list，就把它转成 set 喵！～
-    if (get_cached_origin(e_type) is set or e_type is set) and isinstance(value, list):
-        args = get_cached_args(e_type)
-        if (
-            args
-        ):  # // 杂鱼♡～如果 set 里面有类型定义，比如 Set[Model]，那就要对每个元素进行转换喵～
-            element_type = args[0]
-            return {convert_value(f"{key}[*]", item, element_type) for item in value}
-        else:  # // 杂鱼♡～如果只是普通的 set，比如 Set[str]，就直接转喵～
-            return set(value)
+    origin = get_cached_origin(e_type)
 
-    # 杂鱼♡～处理元组类型喵～
-    if (get_cached_origin(e_type) is tuple or e_type is tuple) and isinstance(value, list):
-        return convert_tuple_type(key, value, e_type)
+    # 杂鱼♡～Union类型必须优先处理，因为它可能包含None或其他特殊类型喵～
+    if origin is Union:
+        return convert_union_type(key, value, e_type)
 
+    # 杂鱼♡～处理特定类型喵～
+    # isinstance(e_type, type) is important for issubclass check
     if isinstance(e_type, type) and issubclass(e_type, Enum):
-        return convert_enum(key, value, e_type)
-    elif is_dataclass(e_type):
-        return convert_dict_to_dataclass(value, e_type)
-    elif is_pydantic_model(e_type):
-        # 杂鱼♡～处理 Pydantic 模型喵～
-        return create_pydantic_from_dict(e_type, value)
-    elif get_cached_origin(e_type) is list or e_type == list:
-        args = get_cached_args(e_type)
-        if args:
-            element_type = args[0]
-            # Optimized path for lists of dataclasses/pydantic models
-            if is_dataclass(element_type):
-                # result = [None] * len(value) # Python lists don't pre-allocate like this easily unless fixed size
-                result = []
-                for item_val in value: # Iterate directly over source list items
-                    result.append(convert_dict_to_dataclass(item_val, element_type))
-                return result
-            elif is_pydantic_model(element_type):
-                result = []
-                for item_val in value:
-                    result.append(create_pydantic_from_dict(element_type, item_val))
-                return result
-            # Path for lists of other types (including simple types, unions, etc.)
-            else:
-                result = []
-                # Keep enumerate for key in recursive call for better error messages
-                for i, item_val in enumerate(value):
-                    result.append(convert_value(f"{key}[{i}]", item_val, element_type))
-                return result
-        # Return list as is if it's a raw list with no type args (e.g. List given, not List[int])
-        # or if value is not a list (though type validation should ideally catch this earlier)
-        return value
-    elif get_cached_origin(e_type) is dict or e_type == dict:
-        return convert_dict_type(key, value, e_type)
-    else:
-        origin = get_cached_origin(e_type)
-        if origin is Union:
-            return convert_union_type(key, value, e_type)
-        else:
-            return convert_simple_type(key, value, e_type)
+        return convert_enum(key, value, e_type) # Existing helper
+    if is_dataclass(e_type): # e_type is the dataclass type itself
+        if not isinstance(value, dict):
+            raise TypeError(f"杂鱼♡～期望字典来创建dataclass {e_type.__name__} 但得到 {type(value).__name__} 为键 {key}喵！～")
+        return convert_dict_to_dataclass(value, e_type) # Existing helper
+    if is_pydantic_model(e_type): # e_type is the Pydantic model type itself
+        if not isinstance(value, dict):
+            raise TypeError(f"杂鱼♡～期望字典来创建Pydantic模型 {e_type.__name__} 但得到 {type(value).__name__} 为键 {key}喵！～")
+        return create_pydantic_from_dict(e_type, value) # Existing helper
+
+    # 杂鱼♡～处理集合类型喵～
+    # Note: For these collection helpers, they expect `value` to be of the source collection type (e.g., list for set/tuple).
+    if (origin is set or e_type is set):
+        if not isinstance(value, list): # JSON arrays become Python lists
+            raise TypeError(f"杂鱼♡～期望列表来创建set但得到 {type(value).__name__} 为键 {key}喵！～")
+        return _convert_set_type(key, value, e_type) # New helper
+    if (origin is tuple or e_type is tuple):
+        if not isinstance(value, list): # JSON arrays become Python lists
+            raise TypeError(f"杂鱼♡～期望列表来创建tuple但得到 {type(value).__name__} 为键 {key}喵！～")
+        return convert_tuple_type(key, value, e_type) # Existing helper
+    if origin is list or e_type is list: # Handles List[T] and plain 'list'
+        # _convert_list_type will check isinstance(value, list)
+        return _convert_list_type(key, value, e_type) # New helper
+    if origin is dict or e_type is dict: # Handles Dict[K,V] and plain 'dict'
+        # convert_dict_type will check isinstance(value, dict)
+        return convert_dict_type(key, value, e_type) # Existing helper
+
+    # 杂鱼♡～其他简单类型或无法识别的类型由 convert_simple_type 处理喵～
+    return convert_simple_type(key, value, e_type) # Refactored helper
 
 
 # // 杂鱼♡～本喵添加了这个函数来检查一个dataclass是否是frozen的喵～
-def is_frozen_dataclass(cls):
-    """Check if a dataclass is frozen."""
+def is_frozen_dataclass(cls: Type) -> bool:
+    """
+    Checks if a given class is a frozen dataclass.
+    """
+    # Added type hint for cls
     return (
         is_dataclass(cls)
         and hasattr(cls, "__dataclass_params__")
@@ -306,10 +395,18 @@ def is_frozen_dataclass(cls):
     )
 
 
-def convert_dict_to_dataclass(data: dict, cls: T) -> T:
-    """Convert a dictionary to a dataclass instance."""
-    if not data:
-        raise ValueError("Empty data dictionary")
+def convert_dict_to_dataclass(data: dict, cls: Type[T]) -> T:
+    """
+    Converts a dictionary to an instance of the given dataclass `cls`.
+    It recursively calls `convert_value` for each field in the dataclass.
+    """
+    # Added Type hint for cls
+    if not data: # data being None is handled by convert_value if target is Optional[Dataclass]
+        # This function specifically expects a dictionary for populating fields.
+        # An empty dict means no fields can be populated, which might be an issue
+        # if the dataclass has required fields without defaults.
+        # Current behavior: raises ValueError, which seems reasonable.
+        raise ValueError("Empty data dictionary provided for dataclass conversion.")
 
     if is_pydantic_model(cls):
         # 杂鱼♡～使用兼容层来创建 Pydantic 模型喵～
@@ -345,91 +442,96 @@ def convert_dict_to_dataclass(data: dict, cls: T) -> T:
 def convert_dataclass_to_dict(
     obj: Any, parent_key: str = "", parent_type: Any = None
 ) -> Any:
-    """Convert a dataclass instance to a dictionary."""
+    """
+    Converts a dataclass instance (or other supported types) to a dictionary
+    suitable for JSON serialization. It handles nested structures, dataclasses,
+    Pydantic models, enums, and various primitive/collection types recursively.
+    Type validation via `validate_type` is performed for collection items and
+    dataclass fields if `parent_type` provides sufficient type information.
+    """
     if obj is None:
         return None
 
-    # 杂鱼♡～处理特殊类型喵～
-    if isinstance(obj, datetime.datetime):
+    # Handle types that have a direct serializable representation
+    if isinstance(obj, (datetime.datetime, datetime.date, datetime.time)):
         return obj.isoformat()
-    elif isinstance(obj, datetime.date):
-        return obj.isoformat()
-    elif isinstance(obj, datetime.time):
-        return obj.isoformat()
-    elif isinstance(obj, datetime.timedelta):
+    if isinstance(obj, datetime.timedelta):
         return obj.total_seconds()
-    elif isinstance(obj, uuid.UUID):
+    if isinstance(obj, uuid.UUID):
         return str(obj)
-    elif isinstance(obj, Decimal):
+    if isinstance(obj, Decimal):
         return str(obj)
-    elif isinstance(obj, tuple):
-        # 杂鱼♡～对于元组，转换为列表返回喵～
+
+    # Handle Pydantic instances using its optimized converter
+    if is_pydantic_instance(obj):
+        return pydantic_to_dict(obj) # Assumes pydantic_to_dict handles internal recursion
+
+    if isinstance(obj, Enum):
+        return obj.name
+
+    # For tuples, recursively convert items; JSON represents tuples as lists.
+    if isinstance(obj, tuple):
+        # Determine element type for tuples like Tuple[X, ...] or Tuple[X,Y]
+        # For simplicity, if parent_type is Tuple[X, ...], use X.
+        # If Tuple[X,Y], this simple element_type extraction might be too naive if items are heterogeneous
+        # and validate_type is used. However, convert_dataclass_to_dict's element_type is for recursion.
+        tuple_element_type = None
+        if parent_type and get_cached_origin(parent_type) is tuple:
+            args = get_cached_args(parent_type)
+            if args:
+                if len(args) == 2 and args[1] is Ellipsis: # Tuple[X, ...]
+                    tuple_element_type = args[0]
+                # For fixed-length tuples (Tuple[X,Y,Z]), a single element_type is not quite right
+                # if X,Y,Z are different. The recursive call will use the specific type of each item
+                # if tuple_element_type is None, or this general one.
+                # The original code passed `get_cached_args(parent_type)[0]` which is also a simplification.
+                # Let's keep it simple for now, relying on deeper validation if needed.
+                # For serialization, the actual type of `item` is often more important than `parent_type`'s arg.
+                # The `parent_type` for the recursive call is more about guiding the next step of serialization.
+                # The original code's `parent_type` for tuple item recursion was:
+                # `(get_cached_args(parent_type)[0] if parent_type and get_cached_args(parent_type) else None)`
+                # This is effectively passing the type of the *first* element of the tuple annotation.
+                if args and not (len(args) == 2 and args[1] is Ellipsis) : # Fixed length tuple e.g. Tuple[int, str]
+                     # For fixed-length tuples, we don't pass a single element_type for all items to the recursive call's parent_type.
+                     # Instead, the recursive call will use the actual type of the item.
+                     # The parent_key is generic here.
+                     return [convert_dataclass_to_dict(item, f"{parent_key}[{i}]" , get_cached_args(parent_type)[i] if args and i < len(args) else None) for i, item in enumerate(obj)]
+
+                # Fallback for Tuple[Any,...] or if logic is complex
+                if args : tuple_element_type = args[0]
+
+
         return [
-            convert_dataclass_to_dict(
+            _convert_collection_item_to_dict(
                 item,
-                f"{parent_key}[]",
-                (
-                    get_cached_args(parent_type)[0]
-                    if parent_type and get_cached_args(parent_type)
-                    else None
-                ),
+                f"{parent_key}[{i}]", # Generic key for tuple items
+                # For Tuple[X, ...], all items are of type X.
+                # For Tuple[X, Y], this is tricky. The original code used args[0].
+                # It's better to pass the specific type from the tuple annotation if available for that position.
+                # However, _convert_collection_item_to_dict takes a single element_type.
+                # The recursive convert_dataclass_to_dict will use the actual type of `item` if element_type is None.
+                # Let's pass the specific type of the annotation if fixed-length, else the general one.
+                tuple_element_type # This will be used for validation if not None
             )
-            for item in obj
+            for i,item in enumerate(obj)
         ]
 
-    if is_pydantic_instance(obj):
-        # 杂鱼♡～使用兼容层来转换 Pydantic 实例喵～
-        return pydantic_to_dict(obj)
-    elif isinstance(obj, Enum):
-        return obj.name
-    # // 杂鱼♡～本喵在这里加了一个 elif，如果遇到 set，就把它变成 list 喵！～
-    elif isinstance(obj, set):
-        # 杂鱼♡～需要检查集合中元素的类型喵～
+
+    # Helper for list and set items
+    if isinstance(obj, (list, set)):
+        collection_name = 'list' if isinstance(obj, list) else 'set'
         element_type = None
-        if parent_type and get_cached_origin(parent_type) is set and get_cached_args(parent_type):
+        if parent_type and get_cached_origin(parent_type) in (list, set) and get_cached_args(parent_type):
             element_type = get_cached_args(parent_type)[0]
 
-        result = []
-        for i, item in enumerate(obj):
-            if element_type:
-                # 杂鱼♡～验证集合中每个元素的类型喵～
-                item_key = f"{parent_key or 'set'}[{i}]"
-                try:
-                    validate_type(item_key, item, element_type)
-                except (TypeError, ValueError) as e:
-                    raise TypeError(
-                        f"杂鱼♡～序列化时集合元素类型验证失败喵：{item_key} {str(e)}～"
-                    )
-
-            result.append(
-                convert_dataclass_to_dict(item, f"{parent_key}[{i}]", element_type)
+        return [
+            _convert_collection_item_to_dict(
+                item, f"{parent_key or collection_name}[{i}]", element_type
             )
+            for i, item in enumerate(obj) # enumerate works for sets too in Python 3.7+ (though order isn't guaranteed for JSON)
+        ]
 
-        return result
-    elif isinstance(obj, list):
-        # 杂鱼♡～需要检查列表中元素的类型喵～
-        element_type = None
-        if parent_type and get_cached_origin(parent_type) is list and get_cached_args(parent_type):
-            element_type = get_cached_args(parent_type)[0]
-
-        result = []
-        for i, item in enumerate(obj):
-            if element_type:
-                # 杂鱼♡～验证列表中每个元素的类型喵～
-                item_key = f"{parent_key or 'list'}[{i}]"
-                try:
-                    validate_type(item_key, item, element_type)
-                except (TypeError, ValueError) as e:
-                    raise TypeError(
-                        f"杂鱼♡～序列化时列表元素类型验证失败喵：{item_key} {str(e)}～"
-                    )
-
-            result.append(
-                convert_dataclass_to_dict(item, f"{parent_key}[{i}]", element_type)
-            )
-
-        return result
-    elif isinstance(obj, dict):
+    if isinstance(obj, dict):
         # 杂鱼♡～需要检查字典中键和值的类型喵～
         key_type, val_type = None, None
         if (
@@ -469,25 +571,55 @@ def convert_dataclass_to_dict(
             )
 
         return result
-    elif is_dataclass(obj):
+    elif is_dataclass(obj): # This must be after specific types like datetime, Enum, etc.
         result = {}
-        t_hints = get_cached_type_hints(type(obj))
-        for key, value in vars(obj).items():
-            e_type = t_hints.get(key)
+        # Obtain type hints for the specific dataclass type of obj, not from parent_type
+        obj_type = type(obj)
+        t_hints = get_cached_type_hints(obj_type)
 
-            # 杂鱼♡～验证dataclass字段类型喵～
-            if e_type is not None:
-                field_key = f"{parent_key}.{key}" if parent_key else key
+        for field_name, field_value in vars(obj).items():
+            # The expected type for the field comes from the dataclass's own type hints
+            field_expected_type = t_hints.get(field_name)
+            current_field_key = f"{parent_key}.{field_name}" if parent_key else field_name
+
+            # Validate the field's value against its type hint before serialization
+            if field_expected_type is not None:
                 try:
-                    validate_type(field_key, value, e_type)
+                    validate_type(current_field_key, field_value, field_expected_type)
                 except (TypeError, ValueError) as e:
+                    # Provide a more specific error message for dataclass field validation
                     raise TypeError(
-                        f"杂鱼♡～序列化时类型验证失败喵：字段 '{field_key}' {str(e)}～"
+                        f"杂鱼♡～序列化时dataclass字段 '{current_field_key}' (类型: {type(field_value).__name__}) "
+                        f"类型验证失败喵 (期望类型: {field_expected_type.__name__ if hasattr(field_expected_type, '__name__') else field_expected_type}): {str(e)}～"
                     )
 
-            # 杂鱼♡～转换值为字典喵～递归时传递字段类型～
-            result[key] = convert_dataclass_to_dict(
-                value, f"{parent_key}.{key}" if parent_key else key, e_type
+            # Recursively convert the field value.
+            # The `parent_type` for the recursive call is the field's own expected type.
+            result[field_name] = convert_dataclass_to_dict(
+                field_value, current_field_key, field_expected_type
             )
         return result
+
+    # Fallback for primitive types (int, str, bool, float) and any other unhandled types
     return obj
+
+
+# --- Helper for convert_dataclass_to_dict (serialization path) ---
+def _convert_collection_item_to_dict(item: Any, item_key: str, element_type: Any) -> Any:
+    """
+    Helper to validate (if `element_type` is known) and then recursively convert
+    an item from a list or set for dictionary representation during serialization.
+    """
+    # Validate the item against the expected element type if provided
+    if element_type:
+        try:
+            validate_type(item_key, item, element_type)
+        except (TypeError, ValueError) as e:
+            # This error message is more generic for items from lists or sets
+            raise TypeError(
+                f"杂鱼♡～序列化时集合/列表元素 '{item_key}' (类型: {type(item).__name__}) "
+                f"类型验证失败喵 (期望类型: {element_type.__name__ if hasattr(element_type, '__name__') else element_type}): {str(e)}～"
+            )
+    # Recursively call convert_dataclass_to_dict for the item.
+    # The `parent_type` for this recursive call is the `element_type`.
+    return convert_dataclass_to_dict(item, item_key, element_type)

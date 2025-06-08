@@ -1,4 +1,7 @@
-"""杂鱼♡～这是本喵的JSDC Loader库喵～可以轻松地在JSON和dataclass之间转换哦～"""
+"""
+JSDC Loader: A library for easy conversion between JSON and dataclasses/Pydantic models.
+杂鱼♡～这是本喵的JSDC Loader库喵～可以轻松地在JSON和dataclass之间转换哦～
+"""
 
 from .dumper import jsdc_dump, jsdc_dumps
 from .loader import jsdc_load, jsdc_loads
