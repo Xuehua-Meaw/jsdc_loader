@@ -13,8 +13,34 @@ from .compat import (
     is_pydantic_model,
     pydantic_to_dict,
 )
-from .types import T, _DATACLASS_CACHE, _SPECIAL_TYPE_CACHE
+from .types import T, _DATACLASS_CACHE, _SPECIAL_TYPE_CACHE, _GET_ORIGIN_CACHE, _GET_ARGS_CACHE, _TYPE_CHECK_CACHE
 from .validator import get_cached_type_hints, validate_type
+
+
+# 杂鱼♡～本喵添加了缓存版本的 get_origin 和 get_args 喵～这样就不用重复计算了～
+def cached_get_origin(tp: Any) -> Any:
+    """杂鱼♡～本喵的缓存版本 get_origin 喵～"""
+    if tp not in _GET_ORIGIN_CACHE:
+        _GET_ORIGIN_CACHE[tp] = get_origin(tp)
+    return _GET_ORIGIN_CACHE[tp]
+
+
+def cached_get_args(tp: Any) -> tuple:
+    """杂鱼♡～本喵的缓存版本 get_args 喵～"""
+    if tp not in _GET_ARGS_CACHE:
+        _GET_ARGS_CACHE[tp] = get_args(tp)
+    return _GET_ARGS_CACHE[tp]
+
+
+# 杂鱼♡～本喵添加了一个快速类型检查缓存喵～
+def cached_isinstance(obj: Any, cls: Type) -> bool:
+    """杂鱼♡～本喵的缓存版本 isinstance 检查喵～"""
+    obj_type = type(obj)
+    cache_key = (obj_type, cls)
+    
+    if cache_key not in _TYPE_CHECK_CACHE:
+        _TYPE_CHECK_CACHE[cache_key] = isinstance(obj, cls)
+    return _TYPE_CHECK_CACHE[cache_key]
 
 
 def convert_enum(key: str, value: Any, enum_type: Type[Enum]) -> Enum:
@@ -27,7 +53,7 @@ def convert_enum(key: str, value: Any, enum_type: Type[Enum]) -> Enum:
 
 def convert_union_type(key: str, value: Any, union_type: Any) -> Any:
     """Convert a value to one of the Union types."""
-    args = get_args(union_type)
+    args = cached_get_args(union_type)
 
     # 杂鱼♡～处理None值喵～
     if value is None and type(None) in args:
@@ -70,7 +96,7 @@ def _is_exact_type_match(value: Any, expected_type: Any) -> bool:
         return type(value) is expected_type
 
     # 杂鱼♡～处理容器类型喵～
-    origin = get_origin(expected_type)
+    origin = cached_get_origin(expected_type)
     if origin is list:
         return isinstance(value, list)
     elif origin is dict:
@@ -107,10 +133,10 @@ def convert_simple_type(key: str, value: Any, e_type: Any) -> Any:
         return value
     elif isinstance(e_type, type) and issubclass(e_type, Enum):
         return e_type[value]
-    elif e_type == dict or get_origin(e_type) == dict:
+    elif e_type == dict or cached_get_origin(e_type) == dict:
         # Handle dict type properly
         return value
-    elif e_type == list or get_origin(e_type) == list:
+    elif e_type == list or cached_get_origin(e_type) == list:
         # Handle list type properly
         return value
     # 杂鱼♡～处理复杂类型喵～如日期、时间等
@@ -129,6 +155,14 @@ def convert_simple_type(key: str, value: Any, e_type: Any) -> Any:
     elif e_type == Decimal and isinstance(value, (str, int, float)):
         return Decimal(str(value))
     else:
+        # 杂鱼♡～对于基本类型，本喵需要先验证类型匹配喵～
+        if e_type in (int, float, str, bool):
+            if not isinstance(value, e_type):
+                raise TypeError(
+                    f"杂鱼♡～键{key}的类型无效喵：期望{e_type}，得到{type(value)}～"
+                )
+            return value
+        
         try:
             return e_type(value)
         except TypeError:
@@ -140,8 +174,8 @@ def convert_simple_type(key: str, value: Any, e_type: Any) -> Any:
 
 def convert_dict_type(key: str, value: dict, e_type: Any) -> dict:
     """Convert a dictionary based on its type annotation."""
-    if get_origin(e_type) is dict:
-        key_type, val_type = get_args(e_type)
+    if cached_get_origin(e_type) is dict:
+        key_type, val_type = cached_get_args(e_type)
 
         # 杂鱼♡～本喵扩展支持更多键类型了喵～
         # 支持字符串、整数、浮点数等基本类型作为键
@@ -178,7 +212,7 @@ def convert_dict_type(key: str, value: dict, e_type: Any) -> dict:
                 converted_key = k  # 杂鱼♡～其他情况保持原样喵～
 
             # 杂鱼♡～转换值喵～
-            if is_dataclass(val_type) or get_origin(val_type) is Union:
+            if is_dataclass(val_type) or cached_get_origin(val_type) is Union:
                 converted_dict[converted_key] = convert_value(f"{key}.{k}", v, val_type)
             else:
                 converted_dict[converted_key] = v
@@ -191,8 +225,8 @@ def convert_dict_type(key: str, value: dict, e_type: Any) -> dict:
 
 def convert_tuple_type(key: str, value: list, e_type: Any) -> tuple:
     """杂鱼♡～本喵帮你把列表转换成元组喵～"""
-    if get_origin(e_type) is tuple:
-        args = get_args(e_type)
+    if cached_get_origin(e_type) is tuple:
+        args = cached_get_args(e_type)
         if len(args) == 2 and args[1] is Ellipsis:  # Tuple[X, ...]
             element_type = args[0]
             return tuple(
@@ -215,41 +249,27 @@ def convert_tuple_type(key: str, value: list, e_type: Any) -> tuple:
 
 def convert_value(key: str, value: Any, e_type: Any) -> Any:
     """Convert a value to the expected type."""
-    # 杂鱼♡～处理None值和Any类型喵～
-    if value is None and (
-        e_type is Any
-        or (get_origin(e_type) is Union and type(None) in get_args(e_type))
-    ):
-        return None
-
-    # 杂鱼♡～如果期望类型是Any，直接返回值喵～
+    # 杂鱼♡～处理None值和Any类型喵～早期返回可以提高性能～
     if e_type is Any:
         return value
+    
+    if value is None:
+        origin = cached_get_origin(e_type)
+        if origin is Union and type(None) in cached_get_args(e_type):
+            return None
+        # 如果不是Union类型但值是None，让它继续处理以抛出适当的错误
+    
+    # 杂鱼♡～先检查常见的简单类型，提早返回喵～
+    value_type = type(value)
+    if e_type is value_type or (e_type in (int, float, str, bool) and value_type is e_type):
+        return value
 
-    # // 杂鱼♡～本喵在这里加了一段逻辑，如果期望的是 set 但得到的是 list，就把它转成 set 喵！～
-    if (get_origin(e_type) is set or e_type is set) and isinstance(value, list):
-        args = get_args(e_type)
-        if (
-            args
-        ):  # // 杂鱼♡～如果 set 里面有类型定义，比如 Set[Model]，那就要对每个元素进行转换喵～
-            element_type = args[0]
-            return {convert_value(f"{key}[*]", item, element_type) for item in value}
-        else:  # // 杂鱼♡～如果只是普通的 set，比如 Set[str]，就直接转喵～
-            return set(value)
+    # 杂鱼♡～缓存origin和args避免重复计算喵～
+    origin = cached_get_origin(e_type)
+    args = cached_get_args(e_type) if origin else None
 
-    # 杂鱼♡～处理元组类型喵～
-    if (get_origin(e_type) is tuple or e_type is tuple) and isinstance(value, list):
-        return convert_tuple_type(key, value, e_type)
-
-    if isinstance(e_type, type) and issubclass(e_type, Enum):
-        return convert_enum(key, value, e_type)
-    elif is_dataclass(e_type):
-        return convert_dict_to_dataclass(value, e_type)
-    elif is_pydantic_model(e_type):
-        # 杂鱼♡～处理 Pydantic 模型喵～
-        return create_pydantic_from_dict(e_type, value)
-    elif get_origin(e_type) is list or e_type == list:
-        args = get_args(e_type)
+    # 杂鱼♡～处理容器类型喵～优化顺序以处理最常见的类型～
+    if origin is list or e_type == list:
         if args and (is_dataclass(args[0]) or is_pydantic_model(args[0])):
             return [
                 (
@@ -265,14 +285,31 @@ def convert_value(key: str, value: Any, e_type: Any) -> Any:
                 for i, item in enumerate(value)
             ]
         return value
-    elif get_origin(e_type) is dict or e_type == dict:
+    elif origin is dict or e_type == dict:
         return convert_dict_type(key, value, e_type)
+    elif origin is set or e_type is set:
+        if isinstance(value, list):
+            if args:
+                element_type = args[0]
+                return {convert_value(f"{key}[*]", item, element_type) for item in value}
+            else:
+                return set(value)
+        return value
+    elif origin is tuple or e_type is tuple:
+        if isinstance(value, list):
+            return convert_tuple_type(key, value, e_type)
+        return value
+    elif origin is Union:
+        return convert_union_type(key, value, e_type)
+    elif isinstance(e_type, type) and issubclass(e_type, Enum):
+        return convert_enum(key, value, e_type)
+    elif is_dataclass(e_type):
+        return convert_dict_to_dataclass(value, e_type)
+    elif is_pydantic_model(e_type):
+        # 杂鱼♡～处理 Pydantic 模型喵～
+        return create_pydantic_from_dict(e_type, value)
     else:
-        origin = get_origin(e_type)
-        if origin is Union:
-            return convert_union_type(key, value, e_type)
-        else:
-            return convert_simple_type(key, value, e_type)
+        return convert_simple_type(key, value, e_type)
 
 
 # // 杂鱼♡～本喵添加了这个函数来检查一个dataclass是否是frozen的喵～
@@ -294,34 +331,19 @@ def convert_dict_to_dataclass(data: dict, cls: T) -> T:
         # 杂鱼♡～使用兼容层来创建 Pydantic 模型喵～
         return create_pydantic_from_dict(cls, data)
 
-    # // 杂鱼♡～如果是frozen dataclass，本喵就使用构造函数来创建实例，而不是先创建再赋值喵～
-    if is_frozen_dataclass(cls):
-        init_kwargs = {}
-        t_hints = get_cached_type_hints(cls)
+    # 杂鱼♡～无论是否为frozen dataclass，都使用构造函数方式创建实例喵～这样更安全～
+    init_kwargs = {}
+    t_hints = get_cached_type_hints(cls)
 
-        for key, value in data.items():
-            if key in t_hints:
-                e_type = t_hints.get(key)
-                if e_type is not None:
-                    init_kwargs[key] = convert_value(key, value, e_type)
-            else:
-                raise ValueError(f"Unknown data key: {key}")
+    for key, value in data.items():
+        if key in t_hints:
+            e_type = t_hints.get(key)
+            if e_type is not None:
+                init_kwargs[key] = convert_value(key, value, e_type)
+        else:
+            raise ValueError(f"Unknown data key: {key}")
 
-        return cls(**init_kwargs)
-    else:
-        # 普通dataclass可以用更高效的实例创建方式
-        root_obj = cls()
-        t_hints = get_cached_type_hints(cls)
-
-        for key, value in data.items():
-            if hasattr(root_obj, key):
-                e_type = t_hints.get(key)
-                if e_type is not None:
-                    setattr(root_obj, key, convert_value(key, value, e_type))
-            else:
-                raise ValueError(f"Unknown data key: {key}")
-
-        return root_obj
+    return cls(**init_kwargs)
 
 
 # 杂鱼♡～本喵添加了一个快速的 dataclass 检查函数喵～
@@ -385,6 +407,11 @@ def convert_dataclass_to_dict(
     if obj is None:
         return None
 
+    # 杂鱼♡～快速检查基本类型，直接返回喵～
+    obj_type = type(obj)
+    if obj_type in (int, float, str, bool):
+        return obj
+
     # 杂鱼♡～本喵用快速类型检查来减少 isinstance 调用喵～
     special_type = get_special_type(obj)
     
@@ -407,8 +434,8 @@ def convert_dataclass_to_dict(
                 item,
                 f"{parent_key}[]",
                 (
-                    get_args(parent_type)[0]
-                    if parent_type and get_args(parent_type)
+                    cached_get_args(parent_type)[0]
+                    if parent_type and cached_get_args(parent_type)
                     else None
                 ),
             )
@@ -419,8 +446,8 @@ def convert_dataclass_to_dict(
     elif special_type == "set":
         # 杂鱼♡～需要检查集合中元素的类型喵～
         element_type = None
-        if parent_type and get_origin(parent_type) is set and get_args(parent_type):
-            element_type = get_args(parent_type)[0]
+        if parent_type and cached_get_origin(parent_type) is set and cached_get_args(parent_type):
+            element_type = cached_get_args(parent_type)[0]
 
         result = []
         for i, item in enumerate(obj):
@@ -442,8 +469,8 @@ def convert_dataclass_to_dict(
     elif special_type == "list":
         # 杂鱼♡～需要检查列表中元素的类型喵～
         element_type = None
-        if parent_type and get_origin(parent_type) is list and get_args(parent_type):
-            element_type = get_args(parent_type)[0]
+        if parent_type and cached_get_origin(parent_type) is list and cached_get_args(parent_type):
+            element_type = cached_get_args(parent_type)[0]
 
         result = []
         for i, item in enumerate(obj):
@@ -467,10 +494,10 @@ def convert_dataclass_to_dict(
         key_type, val_type = None, None
         if (
             parent_type
-            and get_origin(parent_type) is dict
-            and len(get_args(parent_type)) == 2
+            and cached_get_origin(parent_type) is dict
+            and len(cached_get_args(parent_type)) == 2
         ):
-            key_type, val_type = get_args(parent_type)
+            key_type, val_type = cached_get_args(parent_type)
 
         result = {}
         for k, v in obj.items():

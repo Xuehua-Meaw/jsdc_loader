@@ -1568,6 +1568,156 @@ class TestJSDCLoader(unittest.TestCase):
         self.assertEqual(loaded_mixed.float_dict, {1.0: True, 0.0: False})
 
         print("杂鱼♡～本喵测试各种字典键类型支持成功了喵～")
+    
+    def test_dump_load_with_invalid_types(self):
+        """杂鱼♡～本喵要测试当杂鱼提供错误类型时的异常处理喵～"""
+        import random
+        import tempfile
+        from typing import List, Dict
+        
+        # 杂鱼♡～首先定义一个简单的测试数据类喵～
+        @dataclass
+        class SimpleTestData:
+            name: str
+            count: int
+            enabled: bool
+            scores: List[float] = field(default_factory=list)
+            metadata: Dict[str, str] = field(default_factory=dict)
+        
+        # 杂鱼♡～创建正确的测试实例喵～
+        valid_data = SimpleTestData(
+            name="test_data",
+            count=42,
+            enabled=True,
+            scores=[98.5, 87.3, 91.0],
+            metadata={"created_by": "neko", "purpose": "test"}
+        )
+        
+        # 杂鱼♡～先正常保存一次数据喵～
+        valid_temp_path = self.temp_path
+        jsdc_dump(valid_data, valid_temp_path)
+        
+        # 杂鱼♡～验证初始文件内容是正确的喵～
+        try:
+            loaded_valid_data = jsdc_load(valid_temp_path, SimpleTestData)
+            self.assertEqual(loaded_valid_data.name, valid_data.name)
+            self.assertEqual(loaded_valid_data.count, valid_data.count)
+            self.assertEqual(loaded_valid_data.enabled, valid_data.enabled)
+            self.assertEqual(loaded_valid_data.scores, valid_data.scores)
+            self.assertEqual(loaded_valid_data.metadata, valid_data.metadata)
+        except Exception as e:
+            self.fail(f"杂鱼♡～加载有效数据失败了喵～：{str(e)}")
+        
+        # 杂鱼♡～准备一些无效类型的数据喵～
+        invalid_data_samples = [
+            SimpleTestData(name=123, count=42, enabled=True),  # 错误的name类型
+            SimpleTestData(name="test", count="fortytwo", enabled=True),  # 错误的count类型
+            SimpleTestData(name="test", count=42, enabled="yes"),  # 错误的enabled类型
+            SimpleTestData(name="test", count=42, enabled=True, scores={"not": "a list"}),  # 错误的scores类型
+            SimpleTestData(name="test", count=42, enabled=True, metadata=[1, 2, 3]),  # 错误的metadata类型
+        ]
+        
+        # 杂鱼♡～测试jsdc_dump异常处理喵～
+        for i, invalid_data in enumerate(invalid_data_samples):
+            # 使用新临时文件避免污染原始文件
+            with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+                invalid_temp_path = temp_file.name
+            
+            # 杂鱼♡～期待类型错误被捕获喵～
+            with self.assertRaises((TypeError, ValueError)) as context:
+                jsdc_dump(invalid_data, invalid_temp_path)
+            
+            # 杂鱼♡～确保异常被正确抛出喵～
+            self.assertIsNotNone(context.exception)
+            
+            # 杂鱼♡～确保原始文件内容没有被损坏喵～
+            try:
+                loaded_data = jsdc_load(valid_temp_path, SimpleTestData)
+                self.assertEqual(loaded_data.name, valid_data.name)
+            except Exception as e:
+                self.fail(f"杂鱼♡～验证原始文件完整性失败喵～：{str(e)}")
+        
+        # 杂鱼♡～测试加载时的类型检查喵～
+        # 先创建一个有效的JSON文件
+        with tempfile.NamedTemporaryFile(delete=False, mode="w") as temp_file:
+            load_test_path = temp_file.name
+            # 杂鱼♡～写入正确格式但类型错误的JSON喵～
+            invalid_json_samples = [
+                '{"name": 12345, "count": 42, "enabled": true, "scores": [], "metadata": {}}',
+                '{"name": "test", "count": "42", "enabled": true, "scores": [], "metadata": {}}',
+                '{"name": "test", "count": 42, "enabled": "true", "scores": [], "metadata": {}}',
+                '{"name": "test", "count": 42, "enabled": true, "scores": {"not": "list"}, "metadata": {}}',
+                '{"name": "test", "count": 42, "enabled": true, "scores": [], "metadata": [1, 2, 3]}'
+            ]
+            
+            for invalid_json in invalid_json_samples:
+                temp_file.write(invalid_json)
+                temp_file.flush()
+                
+                # 杂鱼♡～期待类型错误被捕获喵～
+                with self.assertRaises((TypeError, ValueError)) as context:
+                    jsdc_load(load_test_path, SimpleTestData)
+                
+                # 杂鱼♡～确保异常被正确抛出喵～
+                self.assertIsNotNone(context.exception)
+                
+                # 杂鱼♡～重置文件内容喵～
+                temp_file.seek(0)
+                temp_file.truncate()
+        
+        # 杂鱼♡～随机混合类型测试喵～
+        @dataclass
+        class ComplexTestData:
+            strings: List[str] = field(default_factory=list)
+            numbers: List[int] = field(default_factory=list)
+            flags: List[bool] = field(default_factory=list)
+        
+        valid_complex = ComplexTestData(
+            strings=["one", "two", "three"],
+            numbers=[1, 2, 3],
+            flags=[True, False, True]
+        )
+        
+        # 杂鱼♡～正常保存一次喵～
+        complex_temp_path = self.temp_path.replace(".json", "_complex.json")
+        try:
+            jsdc_dump(valid_complex, complex_temp_path)
+        except Exception as e:
+            self.fail(f"杂鱼♡～保存有效复杂数据失败喵～：{str(e)}")
+        
+        # 杂鱼♡～随机插入错误类型喵～
+        for _ in range(5):
+            corrupted_data = ComplexTestData(
+                strings=valid_complex.strings.copy(),
+                numbers=valid_complex.numbers.copy(),
+                flags=valid_complex.flags.copy()
+            )
+            
+            # 杂鱼♡～随机选择一个位置插入错误类型喵～
+            target_list = random.choice(["strings", "numbers", "flags"])
+            insert_position = random.randint(0, 2)
+            
+            if target_list == "strings":
+                corrupted_data.strings[insert_position] = random.choice([123, True, 3.14, {}])
+            elif target_list == "numbers":
+                corrupted_data.numbers[insert_position] = random.choice(["string", True, 3.14, {}])
+            else:  # flags
+                corrupted_data.flags[insert_position] = random.choice(["yes", 1, 3.14, {}])
+            
+            with self.assertRaises((TypeError, ValueError)):
+                jsdc_dump(corrupted_data, complex_temp_path)
+            
+            # 杂鱼♡～确保原始文件仍然可以正常加载喵～
+            try:
+                loaded_complex = jsdc_load(complex_temp_path, ComplexTestData)
+                self.assertEqual(loaded_complex.strings, valid_complex.strings)
+                self.assertEqual(loaded_complex.numbers, valid_complex.numbers)
+                self.assertEqual(loaded_complex.flags, valid_complex.flags)
+            except Exception as e:
+                self.fail(f"杂鱼♡～验证复杂数据文件完整性失败喵～：{str(e)}")
+        
+        print("杂鱼♡～本喵的类型错误测试全部通过了喵～你的代码异常处理做得还不错呢～")
+    
 
 
 if __name__ == "__main__":

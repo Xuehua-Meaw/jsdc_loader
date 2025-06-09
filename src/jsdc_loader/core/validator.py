@@ -5,7 +5,22 @@ from enum import Enum
 from typing import Any, Dict, List, Set, Tuple, Type, Union, get_args, get_origin
 
 from .compat import is_pydantic_model
-from .types import _TYPE_HINTS_CACHE
+from .types import _TYPE_HINTS_CACHE, _GET_ORIGIN_CACHE, _GET_ARGS_CACHE
+
+
+# 杂鱼♡～本喵添加了缓存版本的 get_origin 和 get_args 喵～
+def cached_get_origin(tp: Any) -> Any:
+    """杂鱼♡～本喵的缓存版本 get_origin 喵～"""
+    if tp not in _GET_ORIGIN_CACHE:
+        _GET_ORIGIN_CACHE[tp] = get_origin(tp)
+    return _GET_ORIGIN_CACHE[tp]
+
+
+def cached_get_args(tp: Any) -> tuple:
+    """杂鱼♡～本喵的缓存版本 get_args 喵～"""
+    if tp not in _GET_ARGS_CACHE:
+        _GET_ARGS_CACHE[tp] = get_args(tp)
+    return _GET_ARGS_CACHE[tp]
 
 
 def get_cached_type_hints(cls: Type) -> Dict[str, Any]:
@@ -31,16 +46,33 @@ def validate_type(key: str, value: Any, e_type: Any) -> None:
     if e_type is Any:
         return
 
-    o_type = get_origin(e_type)
+    # 杂鱼♡～先做快速的简单类型检查，这是最常见的情况喵～
+    # 但是要特别小心bool和int的关系，因为bool是int的子类喵～
+    value_type = type(value)
+    if e_type in (int, float, str, bool, list, dict, set, tuple) and e_type is value_type:
+        return
+    
+    # 杂鱼♡～特别处理bool和int的混淆问题喵～
+    # 如果期望类型是int但值是bool，或者期望类型是bool但值是int，都要报错喵～
+    if e_type is int and value_type is bool:
+        raise TypeError(
+            f"杂鱼♡～键{key}的类型无效喵：期望<class 'int'>，得到<class 'bool'>～bool不能当int用喵～"
+        )
+    elif e_type is bool and value_type is int:
+        raise TypeError(
+            f"杂鱼♡～键{key}的类型无效喵：期望<class 'bool'>，得到<class 'int'>～int不能当bool用喵～"
+        )
+
+    o_type = cached_get_origin(e_type)
 
     # 杂鱼♡～对于Union类型，本喵需要特殊处理喵～
     if o_type is Union:
         # 如果值是None且Union包含Optional（即None类型），那么就是合法的喵～
-        if value is None and type(None) in get_args(e_type):
+        if value is None and type(None) in cached_get_args(e_type):
             return
 
         # 对于非None值，我们需要检查它是否匹配Union中的任何类型喵～
-        args = get_args(e_type)
+        args = cached_get_args(e_type)
         # 杂鱼♡～这里不使用isinstance检查，而是尝试递归验证每种可能的类型喵～
         valid = False
         for arg in args:
@@ -69,7 +101,7 @@ def validate_type(key: str, value: Any, e_type: Any) -> None:
             )
 
         # 杂鱼♡～检查列表元素类型喵～
-        args = get_args(e_type)
+        args = cached_get_args(e_type)
         if args:
             element_type = args[0]
             for i, item in enumerate(value):
@@ -88,7 +120,7 @@ def validate_type(key: str, value: Any, e_type: Any) -> None:
             )
 
         # 杂鱼♡～检查集合元素类型喵～
-        args = get_args(e_type)
+        args = cached_get_args(e_type)
         if args:
             element_type = args[0]
             for i, item in enumerate(value):
@@ -105,7 +137,7 @@ def validate_type(key: str, value: Any, e_type: Any) -> None:
             )
 
         # 杂鱼♡～检查字典键和值的类型喵～
-        args = get_args(e_type)
+        args = cached_get_args(e_type)
         if len(args) == 2:
             key_type, val_type = args
             for k, v in value.items():
@@ -126,7 +158,7 @@ def validate_type(key: str, value: Any, e_type: Any) -> None:
                 f"杂鱼♡～键{key}的类型无效喵：期望tuple，得到{type(value)}～真是个笨蛋呢～"
             )
 
-        args = get_args(e_type)
+        args = cached_get_args(e_type)
         if not args:
             # 无类型参数的元组，只检查是否为元组类型
             pass

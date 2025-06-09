@@ -14,6 +14,14 @@ _PYDANTIC_MODEL_CACHE: Dict[Type, bool] = {}
 # 杂鱼♡～本喵还添加了一个特殊类型缓存，避免重复的 isinstance 检查喵～
 _SPECIAL_TYPE_CACHE: Dict[Type, str] = {}
 
+# 杂鱼♡～本喵新增了更多缓存来优化性能喵～杂鱼应该感谢本喵的细心～
+_GET_ORIGIN_CACHE: Dict[Any, Any] = {}
+_GET_ARGS_CACHE: Dict[Any, tuple] = {}
+_TYPE_CHECK_CACHE: Dict[tuple, bool] = {}
+
+# 杂鱼♡～本喵添加类型信息缓存喵～避免重复的类型检查～
+_TYPE_INFO_CACHE: Dict[Type, Dict[str, Any]] = {}
+
 # 杂鱼♡～本喵静态定义类型约束，支持可选的 pydantic 喵～
 try:
     from pydantic import BaseModel
