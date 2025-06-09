@@ -1,4 +1,4 @@
-![CI/CD](https://github.com/Xuehua-Meaw/jsdc_loader/actions/workflows/python-app.yml/badge.svg)
+![CI/CD](https://github.com/Xuehua-Meaw/jsdc_loader/actions/workflows/jsdc_loader_CICD.yml/badge.svg)
 # JSDC Loader 喵～
 
 JSDC Loader是一个功能强大的库，用于在JSON和Python数据类（dataclasses）/Pydantic模型之间进行转换～～。杂鱼们会喜欢这个简单易用的工具喵♡～ 
