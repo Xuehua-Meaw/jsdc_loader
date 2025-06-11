@@ -4,7 +4,7 @@ from .dumper import jsdc_dump, jsdc_dumps
 from .loader import jsdc_load, jsdc_loads
 
 __author__ = "Neko"
-__version__ = "0.2.0"
+__version__ = "0.1.017"
 __all__ = ["jsdc_load", "jsdc_loads", "jsdc_dump", "jsdc_dumps"]
 
 # 杂鱼♡～别忘了查看本喵的README.md喵～
