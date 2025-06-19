@@ -2,5 +2,6 @@ dist/
 .env
 *.egg-info/
 __pycache__/
-test.py
 test_optimized.py
+dumps.prof
+test.json
