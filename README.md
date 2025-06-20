@@ -204,7 +204,6 @@ jsdc_dump(user, "user.json")
 # 反序列化后枚举值完全保持一致，本喵处理得很完美喵♡～
 loaded_user = jsdc_load("user.json", UserConfig)
 assert loaded_user.user_type == UserType.ADMIN
-```
 
 class ServerConfig(BaseModel):
     name: str = "main"
@@ -421,13 +420,6 @@ JSDC Loader经过性能优化，即使处理大型结构也能保持高效喵♡
 3. **Generic系统**: 解决嵌套问题，提升泛型支持
 4. **性能优化**: V2架构性能调优
 5. **文档完善**: 详细的V2使用指南
-
-#### 贡献指南
-杂鱼♡～欢迎参与V2架构开发！当前需要：
-- 类型处理器优化
-- 测试用例补充
-- 性能基准测试
-- 文档改进
 
 ## 错误处理
 
