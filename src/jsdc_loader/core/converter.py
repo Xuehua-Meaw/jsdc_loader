@@ -4,8 +4,9 @@ import datetime
 import uuid
 from dataclasses import is_dataclass
 from decimal import Decimal
-from enum import Enum
+from enum import Enum, Flag, IntFlag
 from typing import Any, Type, Union, get_args, get_origin
+from collections import defaultdict, deque
 
 from .types import T, _DATACLASS_CACHE, _SPECIAL_TYPE_CACHE, _GET_ORIGIN_CACHE, _GET_ARGS_CACHE, _TYPE_CHECK_CACHE
 from .validator import get_cached_type_hints, validate_type
@@ -39,10 +40,7 @@ def cached_isinstance(obj: Any, cls: Type) -> bool:
 
 def convert_enum(key: str, value: Any, enum_type: Type[Enum]) -> Enum:
     """Convert a string value to an Enum member."""
-    try:
-        # 杂鱼♡～导入枚举类型喵～
-        from enum import Flag, IntFlag
-        
+    try:        
         # 杂鱼♡～处理 Flag/IntFlag 枚举喵～
         if issubclass(enum_type, (Flag, IntFlag)):
             # 杂鱼♡～Flag/IntFlag 使用数值进行反序列化喵～
@@ -141,10 +139,7 @@ def convert_simple_type(key: str, value: Any, e_type: Any) -> Any:
     # 杂鱼♡～处理特殊类型喵～
     if e_type is Any:
         return value
-    elif isinstance(e_type, type) and issubclass(e_type, Enum):
-        # 杂鱼♡～导入枚举类型喵～
-        from enum import Flag, IntFlag
-        
+    elif isinstance(e_type, type) and issubclass(e_type, Enum):        
         # 杂鱼♡～处理 Flag/IntFlag 枚举喵～
         if issubclass(e_type, (Flag, IntFlag)):
             # 杂鱼♡～Flag/IntFlag 使用数值进行反序列化喵～
@@ -199,7 +194,6 @@ def convert_dict_type(key: str, value: dict, e_type: Any) -> dict:
     # 杂鱼♡～首先检查是否为序列化的defaultdict数据喵～
     if isinstance(value, dict) and value.get("__type__") == "defaultdict":
         # 杂鱼♡～处理序列化的defaultdict数据，但返回普通dict（因为目标类型是Dict）喵～
-        from collections import defaultdict
         data = value["__data__"]
         factory_name = value.get("__default_factory__")
         
@@ -216,7 +210,6 @@ def convert_dict_type(key: str, value: dict, e_type: Any) -> dict:
             factory = None
         
         # 杂鱼♡～获取键值类型喵～
-        from typing import Any
         key_type, val_type = cached_get_args(e_type) if cached_get_args(e_type) else (str, Any)
         
         # 杂鱼♡～转换为普通字典（因为目标类型是Dict不是defaultdict）喵～
@@ -245,7 +238,6 @@ def convert_dict_type(key: str, value: dict, e_type: Any) -> dict:
 
         # 杂鱼♡～本喵扩展支持更多键类型了喵～
         # 支持字符串、整数、浮点数、UUID、Literal等基本类型作为键
-        from typing import get_origin, get_args
         
         # 杂鱼♡～检查是否为 Literal 类型喵～
         is_literal_key = False
@@ -278,7 +270,6 @@ def convert_dict_type(key: str, value: dict, e_type: Any) -> dict:
                 converted_key = k
             elif is_enum_key:
                 # 杂鱼♡～Enum/Flag 类型的键需要反序列化喵～
-                from enum import Flag, IntFlag
                 try:
                     if issubclass(key_type, (Flag, IntFlag)):
                         # 杂鱼♡～Flag/IntFlag 使用数值喵～
@@ -428,8 +419,6 @@ def convert_value(key: str, value: Any, e_type: Any) -> Any:
         return convert_dict_to_dataclass(value, e_type)
     else:
         # 杂鱼♡～处理其他复杂类型喵～
-        from collections import deque, defaultdict
-        
         # 杂鱼♡～处理 deque 类型喵～
         if hasattr(e_type, '__origin__') and e_type.__origin__ is deque:
             if isinstance(value, dict) and value.get("__type__") == "deque":
@@ -585,10 +574,6 @@ def get_special_type(obj) -> str:
     if obj_type in _SPECIAL_TYPE_CACHE:
         return _SPECIAL_TYPE_CACHE[obj_type]
     
-    # 杂鱼♡～导入需要的类型喵～
-    from collections import deque, defaultdict
-    from enum import Flag, IntFlag
-    
     # 杂鱼♡～检查特殊类型并缓存结果喵～
     if obj_type is datetime.datetime:
         result = "datetime"
@@ -702,8 +687,6 @@ def convert_dataclass_to_dict(
         }
     elif special_type == "deque":
         # 杂鱼♡～deque 需要保存 maxlen 信息喵～
-        from collections import deque
-        
         element_type = None
         if parent_type and hasattr(parent_type, '__origin__') and parent_type.__origin__ is deque:
             args = cached_get_args(parent_type)
@@ -721,10 +704,7 @@ def convert_dataclass_to_dict(
             "__data__": result,
             "__maxlen__": obj.maxlen
         }
-    elif special_type == "defaultdict":
-        # 杂鱼♡～defaultdict 需要保存 default_factory 信息喵～
-        from collections import defaultdict
-        
+    elif special_type == "defaultdict":        
         key_type, val_type = None, None
         if parent_type and hasattr(parent_type, '__origin__') and parent_type.__origin__ is defaultdict:
             args = cached_get_args(parent_type)
@@ -756,7 +736,6 @@ def convert_dataclass_to_dict(
             # JSON只支持字符串键，所以本喵需要将其他类型的键转换为字符串～
             if isinstance(k, Enum):
                 # 杂鱼♡～枚举键需要特殊处理喵～
-                from enum import Flag, IntFlag
                 if isinstance(k, (Flag, IntFlag)):
                     # 杂鱼♡～Flag/IntFlag 使用数值作为键喵～
                     json_key = str(k.value)
@@ -869,7 +848,6 @@ def convert_dataclass_to_dict(
             # JSON只支持字符串键，所以本喵需要将其他类型的键转换为字符串～
             if isinstance(k, Enum):
                 # 杂鱼♡～枚举键需要特殊处理喵～
-                from enum import Flag, IntFlag
                 if isinstance(k, (Flag, IntFlag)):
                     # 杂鱼♡～Flag/IntFlag 使用数值作为键喵～
                     json_key = str(k.value)

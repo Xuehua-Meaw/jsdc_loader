@@ -1,7 +1,7 @@
 """杂鱼♡～这是本喵全新设计的转换器喵～使用插件式类型处理器系统，支持所有复杂类型～"""
 
 import json
-from typing import Any, Type, TypeVar, Union
+from typing import Any, Type, TypeVar
 from dataclasses import is_dataclass
 
 from .type_handlers import TypeHandlerRegistry

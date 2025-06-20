@@ -9,6 +9,8 @@ from dataclasses import is_dataclass
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, Union
+from collections import defaultdict, deque
+from enum import Flag, IntFlag
 
 from .core.converter import convert_dataclass_to_dict
 from .core.converter_v2 import jsdc_dumps_v2
@@ -23,8 +25,6 @@ class JSDCJSONEncoder(json.JSONEncoder):
     def default(self, obj: Any) -> Any:
         """杂鱼♡～本喵会把这些特殊类型转换成JSON兼容的格式喵～"""
         # 杂鱼♡～导入需要的类型喵～
-        from collections import deque, defaultdict
-        from enum import Flag, IntFlag
         
         if isinstance(obj, datetime.datetime):
             return obj.isoformat()

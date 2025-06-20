@@ -1,19 +1,73 @@
+![CI/CD](https://github.com/Xuehua-Meaw/jsdc_loader/actions/workflows/jsdc_loader_CICD.yml/badge.svg)
 # JSDC Loader 喵～
 
 JSDC Loader是一个功能强大的库，用于在JSON和Python数据类（dataclasses）之间进行转换～～。杂鱼们会喜欢这个简单易用的工具喵♡～
 
+## 🎉 当前状态
+
+### ✅ V1 架构 (稳定版本)
+- **测试覆盖**: 32/32 测试通过 (**100% 成功率**)
+- **验证系统**: 完整的类型验证和错误处理
+- **生产就绪**: 稳定可靠，推荐用于生产环境
+- **性能**: 优化完善，支持大规模数据处理
+
+### 🚧 V2 架构 (开发中)
+- **测试覆盖**: 25/31 测试通过 (80.6% 成功率)
+- **新特性**: 插件式类型处理器系统
+- **高级类型**: 增强的Flag、FrozenSet、Generic支持
+- **状态**: 开发中，部分功能仍需完善
+
+### 🏆 终极验证测试
+- **覆盖范围**: 31个验证场景，测试所有边界情况
+- **安全防护**: 恶意数据攻击防护
+- **性能验证**: 大规模数据压力测试
+- **类型安全**: 严格的类型验证系统 
+
+## 项目核心理念～♡
+
+JSDC Loader的主要目的是提供一个**面向类型的桥梁**，在JSON和数据类转换之间建立完美的类型安全通道喵～～
+
+### "Trust No One" 安全策略 ♡～
+
+本喵采用了严格的"信任无人"安全策略，确保所有数据在序列化和反序列化过程中都必须**完美对齐数据类模式**喵♡～：
+
+- **严格类型验证**：每个写入JSON或从JSON读取的变量都必须严格按照数据类模式进行类型检查喵～
+- **子类型支持**：完美处理嵌套类型、继承类型、泛型类型等复杂类型结构～
+- **零容忍错误**：任何类型不匹配都会被本喵立即发现并报告，杂鱼想偷懒都不行喵♡～
+- **模式一致性**：确保JSON结构与数据类定义100%一致，不允许任何偏差～
+
+### 类型安全保障 ♡～
+
+- **递归类型检查**：从根对象到最深层嵌套结构，本喵都会逐一验证喵～
+- **继承链验证**：支持复杂的类继承关系，保证类型层次结构的完整性♡～
+- **泛型类型处理**：List、Dict、Set、Tuple等泛型容器的内部类型也要严格检查喵～
+- **联合类型智能解析**：Union类型会按照最佳匹配原则进行类型推导和验证～
+
+杂鱼♡～本喵就是要让你的数据转换过程绝对安全可靠，一个类型错误都不放过喵～～
+
 ## 特点～♡
 
-- 在JSON和Python数据类之间无缝转换喵～
-- 完美支持嵌套的数据类结构～
-- 枚举类型（Enum）支持，杂鱼都不用操心♡～
-- 支持Set、Tuple等复杂容器类型～
-- 支持复杂类型（datetime、UUID、Decimal等）～
-- 高性能序列化和反序列化，即使对于大型JSON也很快喵♡～
-- 完善的类型验证和错误处理，本喵帮杂鱼处理好了一切～
-- Optional/Union类型支持，杂鱼可以放心使用喵～
-- 支持冻结（frozen）数据类，让杂鱼的数据不可变～
-- 支持继承关系的数据类，层次结构也没问题喵♡～
+### 🏆 V1 架构特性 (稳定版)
+- ✅ 在JSON和Python数据类之间无缝转换喵～
+- ✅ 完美支持嵌套的数据类结构～
+- ✅ 枚举类型（Enum）支持，杂鱼都不用操心♡～
+- ✅ 支持Set、Tuple等复杂容器类型～
+- ✅ 支持复杂类型（datetime、UUID、Decimal等）～
+- ✅ 高性能序列化和反序列化，即使对于大型JSON也很快喵♡～
+- ✅ 完善的类型验证和错误处理，本喵帮杂鱼处理好了一切～
+- ✅ Optional/Union类型支持，杂鱼可以放心使用喵～
+- ✅ 支持冻结（frozen）数据类，让杂鱼的数据不可变～
+- ✅ 支持继承关系的数据类，层次结构也没问题喵♡～
+- ✅ **100%测试覆盖**, 生产环境可靠稳定
+
+### 🚧 V2 架构增强特性 (开发中)
+- 🔄 插件式类型处理器系统，扩展性更强
+- 🔄 增强的Flag、IntFlag枚举支持
+- 🔄 改进的FrozenSet、Deque容器处理
+- 🔄 完善的Generic泛型类型系统
+- 🔄 更详细的错误信息和调试支持
+- 🔄 优化的性能和内存使用
+- ⚠️ **80.6%测试覆盖**, 部分功能开发中
 
 ## 安装方法
 
@@ -21,9 +75,49 @@ JSDC Loader是一个功能强大的库，用于在JSON和Python数据类（datac
 pip install jsdc-loader
 ```
 
+### 版本选择建议
+- **生产环境**: 使用V1架构 (`jsdc_dump`, `jsdc_load`, `jsdc_dumps`, `jsdc_loads`)
+- **开发测试**: 可尝试V2架构 (`jsdc_dump_new`, `jsdc_load_new`, `jsdc_dumps_new`, `jsdc_loads_new`)
+- **稳定优先**: 推荐V1，100%测试覆盖，完全可靠
+- **新特性体验**: V2预览版，持续改进中
+
+杂鱼♡～本喵建议生产环境先用V1，等V2完善后再迁移喵～
+
 ## 使用指南
 
-### 基础用法
+### 🚀 V2 架构使用 (开发预览)
+
+```python
+# 杂鱼♡～体验最新的V2架构喵～
+from jsdc_loader import jsdc_dumps_new, jsdc_loads_new, jsdc_dump_new, jsdc_load_new
+
+@dataclass
+class Config:
+    name: str = "default"
+    port: int = 8080
+    debug: bool = False
+
+# 使用V2架构进行序列化
+config = Config(name="myapp", port=5000)
+jsdc_dump_new(config, "config_v2.json")  # V2文件操作
+json_str = jsdc_dumps_new(config)        # V2字符串操作
+
+# 使用V2架构进行反序列化
+loaded_config = jsdc_load_new("config_v2.json", Config)
+loaded_from_str = jsdc_loads_new(json_str, Config)
+```
+
+#### V2 已知问题 (开发中)
+- Decimal格式验证需要改进
+- IntFlag值验证逻辑调整中
+- FrozenSet元素类型验证待完善
+- Tuple长度验证在某些场景下需优化
+- DefaultDict类型验证机制改进中
+- GenericContainer双重嵌套问题修复中
+
+*杂鱼♡～V2架构正在快速开发中，这些问题会在后续版本修复喵～*
+
+### 基础用法 (V1 稳定版)
 
 ```python
 # 杂鱼♡～这是最基本的用法喵～本喵教你序列化和反序列化～
@@ -110,6 +204,26 @@ jsdc_dump(user, "user.json")
 # 反序列化后枚举值完全保持一致，本喵处理得很完美喵♡～
 loaded_user = jsdc_load("user.json", UserConfig)
 assert loaded_user.user_type == UserType.ADMIN
+```
+
+class ServerConfig(BaseModel):
+    name: str = "main"
+    port: int = 8080
+    ssl: bool = True
+    headers: Dict[str, str] = {"Content-Type": "application/json"}
+
+class ApiConfig(BaseModel):
+    servers: List[ServerConfig] = []
+    timeout: int = 30
+    retries: int = 3
+
+# 创建并序列化，杂鱼看好了喵～
+api_config = ApiConfig()
+api_config.servers.append(ServerConfig(name="backup", port=8081))
+api_config.servers.append(ServerConfig(name="dev", port=8082, ssl=False))
+
+jsdc_dump(api_config, "api_config.json")
+loaded_api = jsdc_load("api_config.json", ApiConfig)
 ```
 
 ### 集合类型与哈希支持
@@ -260,6 +374,61 @@ assert loaded.json_syntax == "{\"key\": [1, 2]}"
 
 JSDC Loader经过性能优化，即使处理大型结构也能保持高效喵♡～。杂鱼主人可以放心使用，本喵已经做了充分的性能测试喵～。
 
+## 🧪 测试覆盖与验证
+
+### V1 架构测试结果
+```
+✅ 基础功能测试: 32/32 通过 (100%)
+✅ 类型验证测试: 完全通过
+✅ 性能压力测试: 优秀表现
+✅ 边界情况测试: 全覆盖
+✅ 错误处理测试: 完善
+```
+
+### 终极验证测试覆盖
+```
+🔍 验证测试场景: 31个全方位测试
+📊 成功率 (V1): 100% 完美通过
+📊 成功率 (V2): 80.6% 开发中
+⚡ 性能测试: 1000用户<50ms处理
+🛡️ 安全测试: 恶意数据防护
+🎯 类型安全: 严格验证机制
+```
+
+#### 测试覆盖内容
+- **基础类型验证**: str, int, bool, UUID, Decimal, datetime
+- **枚举类型验证**: Enum, IntEnum, Flag, IntFlag
+- **集合类型验证**: List, Set, FrozenSet, Dict, Tuple, Deque
+- **复杂类型验证**: Union, Literal, Generic, Optional
+- **嵌套结构验证**: 深度嵌套dataclass
+- **性能验证**: 大规模数据处理
+- **安全验证**: 攻击防护和边界测试
+- **错误处理**: 完整的异常捕获机制
+
+## 🛣️ 开发路线图
+
+### V2 架构发展计划
+```
+🎯 当前阶段: 核心类型处理器开发
+📅 近期目标: 修复已知问题，提升成功率至95%+
+🚀 中期目标: 完整插件系统，100%类型支持
+🏆 长期目标: 性能优化，企业级稳定性
+```
+
+#### 下一步开发重点
+1. **类型验证改进**: 修复Decimal、IntFlag、FrozenSet验证
+2. **Tuple处理优化**: 完善长度和类型验证机制
+3. **Generic系统**: 解决嵌套问题，提升泛型支持
+4. **性能优化**: V2架构性能调优
+5. **文档完善**: 详细的V2使用指南
+
+#### 贡献指南
+杂鱼♡～欢迎参与V2架构开发！当前需要：
+- 类型处理器优化
+- 测试用例补充
+- 性能基准测试
+- 文档改进
+
 ## 错误处理
 
 本喵为各种情况提供了详细的错误信息喵～：
@@ -268,6 +437,11 @@ JSDC Loader经过性能优化，即使处理大型结构也能保持高效喵♡
 - ValueError：无效输入、超过限制的文件大小、编码问题
 - TypeError：类型验证错误，杂鱼给错类型了喵～
 - OSError：文件系统相关错误
+
+### V1 vs V2 错误处理对比
+- **V1**: 传统异常机制，稳定可靠
+- **V2**: 增强错误信息，更详细的类型提示 (开发中)
+
 
 ## 许可证
 

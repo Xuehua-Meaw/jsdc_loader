@@ -7,8 +7,7 @@ from collections import defaultdict, deque
 from dataclasses import is_dataclass
 from decimal import Decimal
 from enum import Enum, IntEnum, Flag, IntFlag
-from typing import Any, Dict, Type, Union, get_args, get_origin, Generic, TypeVar, Literal, List
-from types import GenericAlias
+from typing import Any, Union, get_args, get_origin, Literal, List
 
 from .types import T
 from .validator import get_cached_type_hints, validate_type
@@ -472,7 +471,6 @@ class DataclassHandler(TypeHandler):
     
     def _validate_field_type(self, field_name: str, value: Any, expected_type: Any) -> None:
         """杂鱼♡～验证字段类型是否匹配喵～"""
-        from .validator import validate_type
         try:
             validate_type(field_name, value, expected_type)
         except TypeError as e:
