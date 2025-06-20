@@ -5,4 +5,4 @@ dist/
 __pycache__/
 test_optimized.py
 dumps.prof
-test.json
+*.json

@@ -1,6 +1,6 @@
 [project]
 name = "jsdc_loader"
-version = "0.1.017"
+version = "0.2.0"
 authors = [
   { name="StanleyUKN", email="stanley09537000@gmail.com" },
 ]

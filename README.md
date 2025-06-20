@@ -1,7 +1,7 @@
 ![CI/CD](https://github.com/Xuehua-Meaw/jsdc_loader/actions/workflows/jsdc_loader_CICD.yml/badge.svg)
 # JSDC Loader 喵～
 
-JSDC Loader是一个功能强大的库，用于在JSON和Python数据类（dataclasses）/Pydantic模型之间进行转换～～。杂鱼们会喜欢这个简单易用的工具喵♡～ 
+JSDC Loader是一个功能强大的库，用于在JSON和Python数据类（dataclasses）之间进行转换～～。杂鱼们会喜欢这个简单易用的工具喵♡～ 
 
 ## 项目核心理念～♡
 
@@ -25,19 +25,298 @@ JSDC Loader的主要目的是提供一个**面向类型的桥梁**，在JSON和�
 
 杂鱼♡～本喵就是要让你的数据转换过程绝对安全可靠，一个类型错误都不放过喵～～
 
+## 🚀 全面的Python类型支持
+
+### 🔧 **内置类型** - 杂鱼♡～本喵支持所有Python内置类型喵～
+
+```python
+from dataclasses import dataclass
+import array
+import pathlib
+import ipaddress
+import fractions
+from decimal import Decimal
+from jsdc_loader import jsdc_dump, jsdc_load
+
+@dataclass
+class BuiltinTypesDemo:
+    # 基本类型
+    my_int: int = 42
+    my_float: float = 3.14159
+    my_str: str = "杂鱼字符串"
+    my_bool: bool = True
+    
+    # 二进制类型 - 杂鱼♡～本喵新增支持喵～
+    my_bytes: bytes = b"Hello Binary World"
+    my_bytearray: bytearray = bytearray(b"Mutable bytes")
+    
+    # 数值类型 - 杂鱼♡～数学计算不是问题喵～
+    my_complex: complex = complex(3, 4)  # 3+4j
+    my_decimal: Decimal = Decimal("123.456789")
+    my_fraction: fractions.Fraction = fractions.Fraction(22, 7)
+    
+    # 集合类型 - 杂鱼♡～Python特有的类型喵～
+    my_range: range = range(5, 15, 2)  # [5, 7, 9, 11, 13]
+    my_slice: slice = slice(1, 10, 2)  # slice(1, 10, 2)
+    
+    # 数组类型 - 杂鱼♡～高性能数组喵～
+    my_array: array.array = array.array('i', [1, 2, 3, 4, 5])
+
+# 杂鱼♡～序列化和反序列化，什么类型都不怕喵～
+demo = BuiltinTypesDemo()
+jsdc_dump(demo, "builtin_types.json")
+loaded = jsdc_load("builtin_types.json", BuiltinTypesDemo)
+```
+
+### 📚 **标准库类型** - 杂鱼♡～标准库类型全面支持喵～
+
+```python
+import datetime
+import uuid
+import pathlib
+import ipaddress
+import re
+from dataclasses import dataclass, field
+
+@dataclass
+class StandardLibTypesDemo:
+    # 路径类型 - 杂鱼♡～跨平台路径处理喵～
+    my_path: pathlib.Path = pathlib.Path("/tmp/test.txt")
+    my_pure_path: pathlib.PurePath = pathlib.PurePath("relative/path")
+    
+    # 网络类型 - 杂鱼♡～IP地址和网络处理喵～
+    my_ipv4: ipaddress.IPv4Address = ipaddress.IPv4Address("192.168.1.1")
+    my_ipv6: ipaddress.IPv6Address = ipaddress.IPv6Address("::1")
+    my_ipv4_network: ipaddress.IPv4Network = ipaddress.IPv4Network("192.168.0.0/24")
+    my_ipv6_network: ipaddress.IPv6Network = ipaddress.IPv6Network("2001:db8::/32")
+    
+    # 时间类型 - 杂鱼♡～时间处理专家喵～
+    my_datetime: datetime.datetime = field(default_factory=datetime.datetime.now)
+    my_date: datetime.date = field(default_factory=datetime.date.today)
+    my_time: datetime.time = datetime.time(14, 30, 0)
+    my_timedelta: datetime.timedelta = datetime.timedelta(days=7, hours=2)
+    
+    # UUID类型 - 杂鱼♡～唯一标识符喵～
+    my_uuid: uuid.UUID = field(default_factory=uuid.uuid4)
+    
+    # 正则表达式 - 杂鱼♡～模式匹配喵～
+    my_pattern: re.Pattern = re.compile(r'\d+')
+
+# 杂鱼♡～标准库类型也轻松搞定喵～
+demo = StandardLibTypesDemo()
+jsdc_dump(demo, "stdlib_types.json")
+loaded = jsdc_load("stdlib_types.json", StandardLibTypesDemo)
+```
+
+### 🆕 **完整的Typing系统支持** - 杂鱼♡～typing高手就是本喵喵～
+
+```python
+from dataclasses import dataclass, field
+from typing import (
+    List, Dict, Set, Tuple, FrozenSet, Deque,
+    Union, Optional, Literal, Annotated, 
+    TypedDict, NamedTuple, NewType, Any
+)
+from collections import deque, ChainMap, Counter, OrderedDict, defaultdict
+
+# 杂鱼♡～NewType自定义类型喵～
+UserId = NewType('UserId', int)
+UserName = NewType('UserName', str)
+
+# 杂鱼♡～TypedDict结构化字典喵～
+class PersonDict(TypedDict):
+    name: str
+    age: int
+    email: Optional[str]
+
+# 杂鱼♡～NamedTuple命名元组喵～
+class Point(NamedTuple):
+    x: float
+    y: float
+    name: str = "unknown"
+
+@dataclass
+class TypingSystemDemo:
+    # 泛型容器 - 杂鱼♡～类型安全的容器喵～
+    my_list: List[int] = field(default_factory=lambda: [1, 2, 3])
+    my_dict: Dict[str, int] = field(default_factory=lambda: {"a": 1, "b": 2})
+    my_set: Set[str] = field(default_factory=lambda: {"apple", "banana"})
+    my_tuple: Tuple[int, str, bool] = (42, "answer", True)
+    my_frozenset: FrozenSet[int] = frozenset([1, 2, 3])
+    my_deque: Deque[str] = deque(["first", "second"])
+    
+    # 高级容器 - 杂鱼♡～Python高级数据结构喵～
+    my_chainmap: ChainMap = ChainMap({'a': 1}, {'b': 2})
+    my_counter: Counter = Counter(['apple', 'banana', 'apple'])
+    my_ordered_dict: OrderedDict = OrderedDict([('first', 1), ('second', 2)])
+    my_default_dict: defaultdict = field(default_factory=lambda: defaultdict(list))
+    
+    # 联合类型 - 杂鱼♡～灵活的类型组合喵～
+    union_field: Union[int, str, bool] = 42
+    optional_field: Optional[str] = "可选字符串"
+    
+    # 字面量类型 - 杂鱼♡～精确的值约束喵～
+    literal_field: Literal["apple", "banana", "cherry"] = "apple"
+    
+    # 注解类型 - 杂鱼♡～带元数据的类型喵～
+    annotated_field: Annotated[int, "这是一个带注解的整数"] = 100
+    
+    # 结构化类型 - 杂鱼♡～复杂结构轻松处理喵～
+    typed_dict_field: PersonDict = field(default_factory=lambda: {
+        "name": "杂鱼用户", "age": 25, "email": "user@example.com"
+    })
+    named_tuple_field: Point = Point(x=10.5, y=20.3, name="测试点")
+    
+    # 自定义类型 - 杂鱼♡～NewType也支持喵～
+    user_id: UserId = UserId(12345)
+    user_name: UserName = UserName("杂鱼昵称")
+    
+    # 任意类型 - 杂鱼♡～灵活处理喵～
+    any_field: Any = {"anything": "goes here"}
+
+# 杂鱼♡～typing系统全面支持，什么复杂类型都不怕喵～
+demo = TypingSystemDemo()
+jsdc_dump(demo, "typing_system.json")
+loaded = jsdc_load("typing_system.json", TypingSystemDemo)
+```
+
+### 🔥 **增强的枚举类型支持** - 杂鱼♡～枚举专家就是本喵喵～
+
+```python
+from dataclasses import dataclass
+from enum import Enum, IntEnum, Flag, IntFlag, auto
+
+# 杂鱼♡～普通枚举喵～
+class Status(Enum):
+    PENDING = "pending"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+# 杂鱼♡～整数枚举喵～
+class Priority(IntEnum):
+    LOW = 1
+    MEDIUM = 2
+    HIGH = 3
+
+# 杂鱼♡～标志枚举 - 支持组合值喵～
+class Features(Flag):
+    NONE = 0
+    ENCRYPTION = auto()
+    COMPRESSION = auto()
+    BACKUP = auto()
+    ALL = ENCRYPTION | COMPRESSION | BACKUP  # 组合值
+
+# 杂鱼♡～整数标志枚举喵～
+class Permission(IntFlag):
+    READ = 1
+    WRITE = 2
+    EXECUTE = 4
+    ADMIN = READ | WRITE | EXECUTE  # 组合权限
+
+@dataclass
+class EnumTypesDemo:
+    my_status: Status = Status.PENDING
+    my_priority: Priority = Priority.HIGH
+    my_features: Features = Features.ALL  # 杂鱼♡～组合Flag值也支持喵～
+    my_permission: Permission = Permission.ADMIN
+    
+    # 杂鱼♡～枚举作为字典键也完全支持喵～
+    status_messages: Dict[Status, str] = field(default_factory=lambda: {
+        Status.PENDING: "处理中",
+        Status.COMPLETED: "已完成",
+        Status.FAILED: "失败了"
+    })
+
+# 杂鱼♡～枚举类型和组合值都完美支持喵～
+demo = EnumTypesDemo()
+jsdc_dump(demo, "enum_types.json")
+loaded = jsdc_load("enum_types.json", EnumTypesDemo)
+```
+
+### 🌟 **Python版本特性支持** - 杂鱼♡～与时俱进的本喵喵～
+
+```python
+# Python 3.9+ 内置泛型语法支持
+from dataclasses import dataclass
+from typing import Union, Optional
+
+@dataclass 
+class ModernPythonDemo:
+    # 杂鱼♡～Python 3.9+ 可以直接用内置类型作为泛型喵～
+    modern_list: list[int] = field(default_factory=lambda: [1, 2, 3])
+    modern_dict: dict[str, int] = field(default_factory=lambda: {"key": 42})
+    modern_set: set[str] = field(default_factory=lambda: {"item1", "item2"})
+    modern_tuple: tuple[int, ...] = (1, 2, 3, 4, 5)
+    
+    # 杂鱼♡～传统语法当然也支持喵～
+    classic_union: Union[int, str] = "classic"
+    classic_optional: Optional[bool] = True
+
+# Python 3.10+ Union语法 (如果可用的话)
+if sys.version_info >= (3, 10):
+    @dataclass
+    class Python310Demo:
+        # 杂鱼♡～Python 3.10+ 的新Union语法 int | str 喵～
+        new_union: int | str = 42
+        new_optional: str | None = "新语法"
+
+# 杂鱼♡～无论什么Python版本，本喵都完美支持喵～
+```
+
+### 🔑 **复杂字典键类型支持** - 杂鱼♡～字典键类型专家喵～
+
+```python
+from dataclasses import dataclass, field
+from typing import Dict, Literal
+import uuid
+from enum import Enum
+
+class KeyEnum(Enum):
+    KEY1 = "key1"
+    KEY2 = "key2"
+
+@dataclass
+class ComplexKeyDemo:
+    # 杂鱼♡～枚举作为字典键喵～
+    enum_keys: Dict[KeyEnum, str] = field(default_factory=lambda: {
+        KeyEnum.KEY1: "值1",
+        KeyEnum.KEY2: "值2"
+    })
+    
+    # 杂鱼♡～Literal作为字典键喵～
+    literal_keys: Dict[Literal["apple", "banana"], int] = field(default_factory=lambda: {
+        "apple": 100,
+        "banana": 200
+    })
+    
+    # 杂鱼♡～UUID作为字典键喵～
+    uuid_keys: Dict[uuid.UUID, str] = field(default_factory=lambda: {
+        uuid.uuid4(): "第一个",
+        uuid.uuid4(): "第二个"
+    })
+    
+    # 杂鱼♡～更多复杂键类型喵～
+    int_keys: Dict[int, str] = field(default_factory=lambda: {1: "one", 2: "two"})
+    bool_keys: Dict[bool, str] = field(default_factory=lambda: {True: "真", False: "假"})
+
+# 杂鱼♡～复杂字典键类型都能处理喵～
+demo = ComplexKeyDemo()
+jsdc_dump(demo, "complex_keys.json")
+loaded = jsdc_load("complex_keys.json", ComplexKeyDemo)
+```
+
 ## 特点～♡
 
-- 在JSON和Python数据类之间无缝转换喵～
-- 完美支持嵌套的数据类结构～
-- 枚举类型（Enum）支持，杂鱼都不用操心♡～
-- 支持Pydantic的BaseModel类喵～
-- 支持Set、Tuple等复杂容器类型～
-- 支持复杂类型（datetime、UUID、Decimal等）～
-- 高性能序列化和反序列化，即使对于大型JSON也很快喵♡～
-- 完善的类型验证和错误处理，本喵帮杂鱼处理好了一切～
-- Optional/Union类型支持，杂鱼可以放心使用喵～
-- 支持冻结（frozen）数据类，让杂鱼的数据不可变～
-- 支持继承关系的数据类，层次结构也没问题喵♡～
+- **🎯 全面类型支持**：从Python内置类型到最新typing特性，本喵统统支持喵～
+- **🔧 内置类型完整覆盖**：bytes、complex、range、slice、array等一个不落喵♡～
+- **📚 标准库类型支持**：pathlib、ipaddress、fractions等现代Python类型～
+- **🆕 最新Python特性**：Python 3.9+内置泛型、3.10+ Union语法、3.11+新特性～
+- **🔥 增强枚举支持**：Enum、IntEnum、Flag、IntFlag，包括组合Flag值～
+- **🌟 复杂嵌套结构**：无限深度的嵌套数据类、泛型、联合类型～
+- **🚀 高性能优化**：缓存机制、批量验证、智能类型推导～
+- **🛡️ 类型安全保障**：严格的类型验证，零容忍错误处理～
+- **🔑 复杂字典键**：枚举、UUID、Literal等作为字典键完全支持～
+- **💡 智能错误提示**：详细的类型错误信息，帮助杂鱼快速定位问题～
 
 ## 安装方法
 
@@ -109,59 +388,33 @@ jsdc_dump(app, "app_config.json")
 loaded_app = jsdc_load("app_config.json", AppConfig)
 ```
 
-### 枚举类型
+### 复杂类型支持
 
 ```python
-# 杂鱼♡～本喵来教你处理枚举类型喵～
+# 杂鱼♡～本喵支持各种复杂类型喵～这些都不是问题～
+import datetime
+import uuid
+from decimal import Decimal
 from dataclasses import dataclass, field
-from enum import Enum, auto
 from jsdc_loader import jsdc_load, jsdc_dump
-
-class UserType(Enum):
-    ADMIN = auto()
-    USER = auto()
-    GUEST = auto()
 
 @dataclass
-class UserConfig:
-    name: str = "John Doe"
-    user_type: UserType = field(default_factory=lambda: UserType.USER)
+class ComplexConfig:
+    created_at: datetime.datetime = field(default_factory=lambda: datetime.datetime.now())
+    expiry_date: datetime.date = field(default_factory=lambda: datetime.date.today())
+    session_id: uuid.UUID = field(default_factory=lambda: uuid.uuid4())
+    amount: Decimal = Decimal('10.50')
+    time_delta: datetime.timedelta = datetime.timedelta(days=7)
     
-# 创建并序列化，杂鱼看好了喵～
-user = UserConfig(name="Admin", user_type=UserType.ADMIN)
-jsdc_dump(user, "user.json")
+# 序列化和反序列化，杂鱼看好了喵～
+config = ComplexConfig()
+jsdc_dump(config, "complex.json")
+loaded = jsdc_load("complex.json", ComplexConfig)
 
-# 反序列化后枚举值完全保持一致，本喵处理得很完美喵♡～
-loaded_user = jsdc_load("user.json", UserConfig)
-assert loaded_user.user_type == UserType.ADMIN
-```
-
-### Pydantic模型
-
-```python
-# 杂鱼♡～Pydantic模型也可以序列化/反序列化喵～
-from pydantic import BaseModel
-from typing import List, Dict
-from jsdc_loader import jsdc_load, jsdc_dump
-
-class ServerConfig(BaseModel):
-    name: str = "main"
-    port: int = 8080
-    ssl: bool = True
-    headers: Dict[str, str] = {"Content-Type": "application/json"}
-
-class ApiConfig(BaseModel):
-    servers: List[ServerConfig] = []
-    timeout: int = 30
-    retries: int = 3
-
-# 创建并序列化，杂鱼看好了喵～
-api_config = ApiConfig()
-api_config.servers.append(ServerConfig(name="backup", port=8081))
-api_config.servers.append(ServerConfig(name="dev", port=8082, ssl=False))
-
-jsdc_dump(api_config, "api_config.json")
-loaded_api = jsdc_load("api_config.json", ApiConfig)
+# 所有复杂类型都保持一致，本喵太厉害了喵♡～
+assert loaded.created_at == config.created_at
+assert loaded.session_id == config.session_id
+assert loaded.amount == config.amount
 ```
 
 ### 集合类型与哈希支持
@@ -200,35 +453,6 @@ model_list.models.add(model2)
 # 序列化和反序列化，本喵轻松搞定喵♡～
 jsdc_dump(model_list, "models.json")
 loaded_list = jsdc_load("models.json", ModelList)
-```
-
-### 复杂类型支持
-
-```python
-# 杂鱼♡～本喵支持各种复杂类型喵～这些都不是问题～
-import datetime
-import uuid
-from decimal import Decimal
-from dataclasses import dataclass, field
-from jsdc_loader import jsdc_load, jsdc_dump
-
-@dataclass
-class ComplexConfig:
-    created_at: datetime.datetime = field(default_factory=lambda: datetime.datetime.now())
-    expiry_date: datetime.date = field(default_factory=lambda: datetime.date.today())
-    session_id: uuid.UUID = field(default_factory=lambda: uuid.uuid4())
-    amount: Decimal = Decimal('10.50')
-    time_delta: datetime.timedelta = datetime.timedelta(days=7)
-    
-# 序列化和反序列化，杂鱼看好了喵～
-config = ComplexConfig()
-jsdc_dump(config, "complex.json")
-loaded = jsdc_load("complex.json", ComplexConfig)
-
-# 所有复杂类型都保持一致，本喵太厉害了喵♡～
-assert loaded.created_at == config.created_at
-assert loaded.session_id == config.session_id
-assert loaded.amount == config.amount
 ```
 
 ### 联合类型
@@ -312,6 +536,46 @@ assert loaded.json_syntax == "{\"key\": [1, 2]}"
 
 JSDC Loader经过性能优化，即使处理大型结构也能保持高效喵♡～。杂鱼主人可以放心使用，本喵已经做了充分的性能测试喵～。
 
+## 🎯 支持的Python类型总览
+
+### ✅ **内置类型**
+- 基本类型：`int`, `float`, `str`, `bool`
+- 二进制类型：`bytes`, `bytearray`, `memoryview`
+- 数值类型：`complex`, `Decimal`, `Fraction`
+- 集合类型：`range`, `slice`, `list`, `dict`, `set`, `tuple`, `frozenset`
+- 数组类型：`array.array`
+
+### ✅ **标准库类型**
+- 时间类型：`datetime`, `date`, `time`, `timedelta`
+- 路径类型：`pathlib.Path`, `pathlib.PurePath`
+- 网络类型：`ipaddress.IPv4Address`, `IPv6Address`, `IPv4Network`, `IPv6Network`
+- 唯一标识：`uuid.UUID`
+- 正则表达式：`re.Pattern`
+
+### ✅ **Typing系统**
+- 泛型容器：`List[T]`, `Dict[K,V]`, `Set[T]`, `Tuple[T,...]`, `FrozenSet[T]`, `Deque[T]`
+- 高级容器：`ChainMap`, `Counter`, `OrderedDict`, `DefaultDict`
+- 联合类型：`Union[T, U]`, `Optional[T]`, `T | U` (Python 3.10+)
+- 字面量：`Literal["value1", "value2"]`
+- 结构化：`TypedDict`, `NamedTuple`
+- 特殊类型：`Any`, `ClassVar`, `Final`, `Annotated`, `NewType`
+
+### ✅ **枚举类型**
+- `Enum`, `IntEnum`, `Flag`, `IntFlag`
+- 组合Flag值：`MyFlag.A | MyFlag.B`
+- 枚举作为字典键完全支持
+
+### ✅ **Python版本特性**
+- Python 3.9+：内置泛型 `list[int]`, `dict[str, int]`
+- Python 3.10+：Union语法 `int | str`
+- Python 3.11+：`Self`, `Never`, `NotRequired`, `Required`, `TypeGuard`, `TypeIs`
+- Python 3.13：`ReadOnly` TypedDict
+
+### 🔄 **扩展支持**
+- NumPy arrays (可选)
+- Pandas DataFrames (可选)
+- 异步类型 (Future等)
+
 ## 错误处理
 
 本喵为各种情况提供了详细的错误信息喵～：
@@ -321,9 +585,8 @@ JSDC Loader经过性能优化，即使处理大型结构也能保持高效喵♡
 - TypeError：类型验证错误，杂鱼给错类型了喵～
 - OSError：文件系统相关错误
 
-
 ## 许可证
 
 MIT 
 
-杂鱼♡～本喵已经为你提供了最完整的说明文档，快去用起来喵～～ 
+杂鱼♡～本喵已经为你提供了最完整的说明文档，现在支持全面的Python类型系统！快去用起来喵～～
