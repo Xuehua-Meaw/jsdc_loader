@@ -1,13 +1,12 @@
 # JSDC Loader 喵～
 
-JSDC Loader是一个功能强大的库，用于在JSON和Python数据类（dataclasses）/Pydantic模型之间进行转换～～。杂鱼们会喜欢这个简单易用的工具喵♡～
+JSDC Loader是一个功能强大的库，用于在JSON和Python数据类（dataclasses）之间进行转换～～。杂鱼们会喜欢这个简单易用的工具喵♡～
 
 ## 特点～♡
 
 - 在JSON和Python数据类之间无缝转换喵～
 - 完美支持嵌套的数据类结构～
 - 枚举类型（Enum）支持，杂鱼都不用操心♡～
-- 支持Pydantic的BaseModel类喵～
 - 支持Set、Tuple等复杂容器类型～
 - 支持复杂类型（datetime、UUID、Decimal等）～
 - 高性能序列化和反序列化，即使对于大型JSON也很快喵♡～
@@ -111,34 +110,6 @@ jsdc_dump(user, "user.json")
 # 反序列化后枚举值完全保持一致，本喵处理得很完美喵♡～
 loaded_user = jsdc_load("user.json", UserConfig)
 assert loaded_user.user_type == UserType.ADMIN
-```
-
-### Pydantic模型
-
-```python
-# 杂鱼♡～Pydantic模型也可以序列化/反序列化喵～
-from pydantic import BaseModel
-from typing import List, Dict
-from jsdc_loader import jsdc_load, jsdc_dump
-
-class ServerConfig(BaseModel):
-    name: str = "main"
-    port: int = 8080
-    ssl: bool = True
-    headers: Dict[str, str] = {"Content-Type": "application/json"}
-
-class ApiConfig(BaseModel):
-    servers: List[ServerConfig] = []
-    timeout: int = 30
-    retries: int = 3
-
-# 创建并序列化，杂鱼看好了喵～
-api_config = ApiConfig()
-api_config.servers.append(ServerConfig(name="backup", port=8081))
-api_config.servers.append(ServerConfig(name="dev", port=8082, ssl=False))
-
-jsdc_dump(api_config, "api_config.json")
-loaded_api = jsdc_load("api_config.json", ApiConfig)
 ```
 
 ### 集合类型与哈希支持

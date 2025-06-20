@@ -13,19 +13,13 @@ from enum import Enum, auto
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
-# 杂鱼♡～本喵要让pydantic导入变成可选的喵～
-try:
-    from pydantic import BaseModel
-    HAS_PYDANTIC = True
-except ImportError:
-    # 杂鱼♡～没有pydantic时，本喵创建一个虚拟的BaseModel喵～
-    HAS_PYDANTIC = False
-    class BaseModel:
-        """杂鱼♡～虚拟的BaseModel，只是为了测试能运行喵～"""
-        pass
 
-from .dumper import jsdc_dump, jsdc_dumps
-from .loader import jsdc_load, jsdc_loads
+from .dumper import jsdc_dumps, jsdc_dump
+from .loader import jsdc_loads, jsdc_load
+
+# In progress (v2 Use with caution)
+# from .dumper import jsdc_dumps_v2 as jsdc_dumps, jsdc_dump_new as jsdc_dump
+# from .loader import jsdc_loads_v2 as jsdc_loads, jsdc_load_new as jsdc_load
 
 
 class TestJSDCLoader(unittest.TestCase):
@@ -134,37 +128,6 @@ class TestJSDCLoader(unittest.TestCase):
         )
         self.assertEqual(loaded_app.settings, {"theme": "dark", "language": "en"})
         print("杂鱼♡～本喵测试嵌套的数据类成功了喵～")
-
-    def test_pydantic_models(self):
-        """杂鱼♡～本喵要测试Pydantic模型了喵～"""
-        
-        # 杂鱼♡～如果没有pydantic，本喵就跳过这个测试喵～
-        if not HAS_PYDANTIC:
-            self.skipTest("杂鱼♡～没有pydantic，本喵跳过这个测试喵～")
-
-        class ServerConfig(BaseModel):
-            name: str = "main"
-            port: int = 8080
-            ssl: bool = True
-            headers: Dict[str, str] = {"Content-Type": "application/json"}
-
-        class ApiConfig(BaseModel):
-            servers: List[ServerConfig] = []
-            timeout: int = 30
-            retries: int = 3
-
-        api_config = ApiConfig()
-        api_config.servers.append(ServerConfig(name="backup", port=8081))
-        api_config.servers.append(ServerConfig(name="dev", port=8082, ssl=False))
-
-        jsdc_dump(api_config, self.temp_path)
-        loaded_api = jsdc_load(self.temp_path, ApiConfig)
-
-        self.assertEqual(len(loaded_api.servers), 2)
-        self.assertEqual(loaded_api.servers[0].name, "backup")
-        self.assertEqual(loaded_api.servers[1].port, 8082)
-        self.assertFalse(loaded_api.servers[1].ssl)
-        print("杂鱼♡～本喵测试Pydantic模型成功了喵～")
 
     def test_hashable_model_set(self):
         """杂鱼♡～为了让Model可哈希，本喵决定添加__hash__和__eq__方法喵～"""

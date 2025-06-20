@@ -5,3 +5,9 @@ __pycache__/
 test_optimized.py
 dumps.prof
 test.json
+.promptx/
+ultra_test.py
+ultra_complex_test.json
+ultra_validation_test.py
+uv.lock
+test.py

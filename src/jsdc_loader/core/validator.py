@@ -1,10 +1,15 @@
 """杂鱼♡～这是本喵的验证工具喵～本喵可是非常严格的，不会让杂鱼传入错误的类型呢～"""
 
+import inspect
 from dataclasses import is_dataclass
 from enum import Enum
 from typing import Any, Dict, List, Set, Tuple, Type, Union, get_args, get_origin
 
-from .compat import is_pydantic_model
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
+
 from .types import _TYPE_HINTS_CACHE, _GET_ORIGIN_CACHE, _GET_ARGS_CACHE
 
 
@@ -27,8 +32,35 @@ def get_cached_type_hints(cls: Type) -> Dict[str, Any]:
     """杂鱼♡～本喵用缓存来获取类型提示，这样速度更快喵～"""
     if cls not in _TYPE_HINTS_CACHE:
         from typing import get_type_hints
-
-        _TYPE_HINTS_CACHE[cls] = get_type_hints(cls)
+        
+        try:
+            # 杂鱼♡～尝试正常获取类型提示喵～
+            _TYPE_HINTS_CACHE[cls] = get_type_hints(cls)
+        except (NameError, AttributeError) as e:
+            # 杂鱼♡～如果前向引用失败，使用原始注解作为后备喵～
+            # 这通常发生在函数内部定义的类有前向引用时喵～
+            try:
+                # 杂鱼♡～尝试从调用栈中获取正确的命名空间喵～
+                frame = inspect.currentframe()
+                # 向上查找几层栈帧，寻找包含所需类定义的作用域
+                for _ in range(10):  # 最多查找10层
+                    frame = frame.f_back
+                    if frame is None:
+                        break
+                    
+                    # 杂鱼♡～尝试在当前帧的局部和全局命名空间中解析类型提示喵～
+                    try:
+                        _TYPE_HINTS_CACHE[cls] = get_type_hints(cls, frame.f_globals, frame.f_locals)
+                        break
+                    except (NameError, AttributeError):
+                        continue
+                else:
+                    # 杂鱼♡～如果所有尝试都失败，使用原始注解喵～
+                    _TYPE_HINTS_CACHE[cls] = getattr(cls, '__annotations__', {})
+            except Exception:
+                # 杂鱼♡～最后的后备方案喵～
+                _TYPE_HINTS_CACHE[cls] = getattr(cls, '__annotations__', {})
+    
     return _TYPE_HINTS_CACHE[cls]
 
 
@@ -36,8 +68,8 @@ def validate_dataclass(cls: Any) -> None:
     """杂鱼♡～本喵帮你验证提供的类是否为dataclass或BaseModel喵～杂鱼总是分不清这些～"""
     if not cls:
         raise TypeError("杂鱼♡～data_class不能为None喵！～")
-    if not (is_dataclass(cls) or is_pydantic_model(cls)):
-        raise TypeError("杂鱼♡～data_class必须是dataclass或Pydantic BaseModel喵！～")
+    if not (is_dataclass(cls)):
+        raise TypeError("杂鱼♡～data_class必须是dataclass喵！～")
 
 
 def validate_type(key: str, value: Any, e_type: Any) -> None:
@@ -187,13 +219,31 @@ def validate_type(key: str, value: Any, e_type: Any) -> None:
                         f"杂鱼♡～元组{key}的第{i}个元素类型无效喵：{str(e)}"
                     )
 
+    # 杂鱼♡～对于Literal类型，需要特殊处理喵～
+    elif o_type is Literal:
+        # 杂鱼♡～检查值是否在Literal允许的值中喵～
+        args = cached_get_args(e_type)
+        if value not in args:
+            raise TypeError(
+                f"杂鱼♡～键{key}的值无效喵：期望{args}中的一个，得到{value}～"
+            )
+        return
+
     # 杂鱼♡～对于其他复杂类型，如List、Dict等，本喵需要检查origin喵～
     elif o_type is not None:
-        # 对于列表、字典等容器类型，只需检查容器类型，不检查内容类型喵～
-        if not isinstance(value, o_type):
-            raise TypeError(
-                f"杂鱼♡～键{key}的类型无效喵：期望{o_type}，得到{type(value)}～真是个笨蛋呢～"
-            )
+        # 杂鱼♡～对于列表、字典等容器类型，只需检查容器类型，不检查内容类型喵～
+        # 杂鱼♡～但要排除不能用于isinstance的类型喵～
+        try:
+            if not isinstance(value, o_type):
+                raise TypeError(
+                    f"杂鱼♡～键{key}的类型无效喵：期望{o_type}，得到{type(value)}～真是个笨蛋呢～"
+                )
+        except TypeError as e:
+            # 杂鱼♡～如果isinstance失败，可能是特殊类型，跳过检查喵～
+            if "cannot be used with isinstance()" in str(e):
+                return
+            else:
+                raise
 
     # 杂鱼♡～对于简单类型，直接使用isinstance喵～
     else:
@@ -207,8 +257,17 @@ def validate_type(key: str, value: Any, e_type: Any) -> None:
                 raise TypeError(
                     f"杂鱼♡～键{key}的类型无效喵：期望{e_type}，得到{type(value)}～"
                 )
-        elif not isinstance(value, e_type) and e_type is not Any:
-            # Any类型不做类型检查喵～
-            raise TypeError(
-                f"杂鱼♡～键{key}的类型无效喵：期望{e_type}，得到{type(value)}～"
-            )
+        elif e_type is not Any:
+            # 杂鱼♡～对于可能不支持isinstance的类型，使用try-except处理喵～
+            try:
+                if not isinstance(value, e_type):
+                    raise TypeError(
+                        f"杂鱼♡～键{key}的类型无效喵：期望{e_type}，得到{type(value)}～"
+                    )
+            except TypeError as e:
+                # 杂鱼♡～如果isinstance失败，可能是特殊的类型注解喵～
+                if "isinstance()" in str(e) and ("must be a type" in str(e) or "cannot be used with isinstance" in str(e)):
+                    # 杂鱼♡～对于不支持isinstance的类型，跳过检查喵～
+                    return
+                else:
+                    raise

@@ -1,4 +1,4 @@
-"""杂鱼♡～这是本喵的序列化工具喵～本喵可以把你的dataclass和Pydantic模型变成JSON喵～"""
+"""杂鱼♡～这是本喵的序列化工具喵～本喵可以把你的dataclass变成JSON喵～"""
 
 import datetime
 import json
@@ -10,8 +10,8 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any, Union
 
-from .core.compat import is_pydantic_instance
 from .core.converter import convert_dataclass_to_dict
+from .core.converter_v2 import jsdc_dumps_v2
 from .core.types import T
 from .file_ops import ensure_directory_exists
 
@@ -22,6 +22,10 @@ class JSDCJSONEncoder(json.JSONEncoder):
 
     def default(self, obj: Any) -> Any:
         """杂鱼♡～本喵会把这些特殊类型转换成JSON兼容的格式喵～"""
+        # 杂鱼♡～导入需要的类型喵～
+        from collections import deque, defaultdict
+        from enum import Flag, IntFlag
+        
         if isinstance(obj, datetime.datetime):
             return obj.isoformat()
         elif isinstance(obj, datetime.date):
@@ -36,14 +40,50 @@ class JSDCJSONEncoder(json.JSONEncoder):
             return str(obj)
         elif isinstance(obj, set):
             return list(obj)
+        elif isinstance(obj, frozenset):
+            # 杂鱼♡～frozenset 需要特殊标记以便反序列化喵～
+            return {
+                "__type__": "frozenset",
+                "__data__": list(obj)
+            }
+        elif isinstance(obj, deque):
+            # 杂鱼♡～deque 需要保存 maxlen 信息喵～
+            return {
+                "__type__": "deque",
+                "__data__": list(obj),
+                "__maxlen__": obj.maxlen
+            }
+        elif isinstance(obj, defaultdict):
+            # 杂鱼♡～defaultdict 需要保存 default_factory 信息喵～
+            default_factory_name = None
+            if obj.default_factory is not None:
+                if obj.default_factory is list:
+                    default_factory_name = "list"
+                elif obj.default_factory is dict:
+                    default_factory_name = "dict"
+                elif obj.default_factory is set:
+                    default_factory_name = "set"
+                elif obj.default_factory is int:
+                    default_factory_name = "int"
+                else:
+                    default_factory_name = str(obj.default_factory)
+            
+            return {
+                "__type__": "defaultdict",
+                "__data__": dict(obj),
+                "__default_factory__": default_factory_name
+            }
+        elif isinstance(obj, (Flag, IntFlag)):
+            # 杂鱼♡～Flag/IntFlag 使用数值序列化喵～
+            return obj.value
         elif is_dataclass(obj):
             return convert_dataclass_to_dict(obj)
         # 杂鱼♡～其他类型就交给父类处理喵～
         return super().default(obj)
 
 
-def jsdc_dumps(obj: T, indent: int = 4) -> str:
-    """杂鱼♡～本喵帮你把dataclass或Pydantic模型实例序列化成JSON字符串喵～
+def jsdc_dumps(obj: T, indent: int = 4, use_v2: bool = False) -> str:
+    """杂鱼♡～本喵帮你把dataclass实例序列化成JSON字符串喵～
 
     这个函数接收一个dataclass实例，并将其序列化为JSON字符串喵～
     JSON输出可以使用指定的缩进级别格式化喵～杂鱼是不是太懒了，连文件都不想写呢♡～
@@ -51,6 +91,7 @@ def jsdc_dumps(obj: T, indent: int = 4) -> str:
     Args:
         obj (T): 要序列化的dataclass实例喵～
         indent (int, optional): JSON输出中使用的缩进空格数喵～默认是4～看起来整齐一点～
+        use_v2 (bool, optional): 是否使用新的V2架构喵～默认False保持兼容性～
 
     Returns:
         str: 序列化后的JSON字符串喵～杂鱼可以好好利用它哦～
@@ -62,12 +103,16 @@ def jsdc_dumps(obj: T, indent: int = 4) -> str:
     if indent < 0:
         raise ValueError("杂鱼♡～缩进必须是非负数喵！～负数是什么意思啦～")
 
+    # 杂鱼♡～如果使用V2架构，直接调用新的处理器系统喵～
+    if use_v2:
+        return jsdc_dumps_v2(obj, type(obj), indent)
+
     try:
         if isinstance(obj, type):
             raise TypeError("杂鱼♡～obj必须是实例而不是类喵！～你真是搞不清楚呢～")
 
-        if not (is_dataclass(obj) or is_pydantic_instance(obj)):
-            raise TypeError("杂鱼♡～obj必须是dataclass或Pydantic BaseModel实例喵！～")
+        if not is_dataclass(obj):
+            raise TypeError("杂鱼♡～obj必须是dataclass实例喵！～")
 
         # 获取对象的类型提示
         obj_type = type(obj)
@@ -86,9 +131,9 @@ def jsdc_dumps(obj: T, indent: int = 4) -> str:
 
 
 def jsdc_dump(
-    obj: T, output_path: Union[str, Path], encoding: str = "utf-8", indent: int = 4
+    obj: T, output_path: Union[str, Path], encoding: str = "utf-8", indent: int = 4, use_v2: bool = False
 ) -> None:
-    """杂鱼♡～本喵帮你把dataclass或Pydantic模型实例序列化成JSON文件喵～
+    """杂鱼♡～本喵帮你把dataclass实例序列化成JSON文件喵～
 
     这个函数接收一个dataclass实例，并将其序列化表示写入到指定文件中，
     格式为JSON喵～输出文件可以使用指定的字符编码，JSON输出可以
@@ -101,6 +146,7 @@ def jsdc_dump(
         output_path (Union[str, Path]): 要保存JSON数据的输出文件路径喵～杂鱼现在可以用字符串或Path对象了♡～
         encoding (str, optional): 输出文件使用的字符编码喵～默认是'utf-8'～
         indent (int, optional): JSON输出中使用的缩进空格数喵～默认是4～看起来整齐一点～
+        use_v2 (bool, optional): 是否使用新的V2架构喵～默认False保持兼容性～
 
     Raises:
         ValueError: 如果提供的对象不是dataclass或路径无效，本喵会生气地抛出错误喵！～
@@ -128,11 +174,11 @@ def jsdc_dump(
         if isinstance(obj, type):
             raise TypeError("杂鱼♡～obj必须是实例而不是类喵！～你真是搞不清楚呢～")
 
-        if not (is_dataclass(obj) or is_pydantic_instance(obj)):
-            raise TypeError("杂鱼♡～obj必须是dataclass或Pydantic BaseModel实例喵！～")
+        if not is_dataclass(obj):
+            raise TypeError("杂鱼♡～obj必须是dataclass实例喵！～")
 
         # 杂鱼♡～先序列化为字符串喵～
-        json_str = jsdc_dumps(obj, indent)
+        json_str = jsdc_dumps(obj, indent, use_v2)
 
         # 杂鱼♡～使用临时文件进行安全写入喵～
         # 在同一目录创建临时文件，确保重命名操作在同一文件系统内执行喵～
@@ -173,7 +219,106 @@ def jsdc_dump(
 
     except OSError as e:
         raise OSError(f"杂鱼♡～创建目录或访问文件失败喵：{str(e)}～")
-    except TypeError as e:
-        raise TypeError(f"杂鱼♡～类型验证失败喵：{str(e)}～真是个笨蛋呢～")
+    except (ValueError, TypeError) as e:
+        # 杂鱼♡～让类型和值错误直接传播，这是期望的行为喵～
+        raise e
+    except Exception as e:
+        raise ValueError(f"杂鱼♡～序列化过程中出错喵：{str(e)}～")
+
+
+# 杂鱼♡～为了方便使用新架构，本喵提供专门的V2函数喵～
+def jsdc_dumps_new(obj: T, indent: int = 4) -> str:
+    """杂鱼♡～使用新架构的序列化函数喵～支持所有复杂类型～
+    
+    这是jsdc_dumps的V2版本，使用新的插件式类型处理器系统喵～
+    支持Flag、IntFlag、Deque、FrozenSet、defaultdict、Generic、Literal等复杂类型～
+    
+    Args:
+        obj (T): 要序列化的对象喵～可以是任何支持的类型～
+        indent (int, optional): JSON缩进空格数喵～默认4～
+        
+    Returns:
+        str: 序列化后的JSON字符串喵～
+        
+    Examples:
+        >>> from enum import Flag, auto
+        >>> from collections import deque
+        >>> @dataclass
+        >>> class Config:
+        ...     features: Flag
+        ...     history: Deque[str]
+        >>> config = Config(Features.A | Features.B, deque(['x', 'y']))
+        >>> json_str = jsdc_dumps_new(config)
+    """
+    return jsdc_dumps_v2(obj, type(obj), indent)
+
+
+def jsdc_dump_new(
+    obj: T, output_path: Union[str, Path], encoding: str = "utf-8", indent: int = 4
+) -> None:
+    """杂鱼♡～使用新架构的文件序列化函数喵～支持所有复杂类型～
+    
+    这是jsdc_dump的V2版本，使用新的插件式类型处理器系统喵～
+    
+    Args:
+        obj (T): 要序列化的对象喵～
+        output_path (Union[str, Path]): 输出文件路径喵～
+        encoding (str, optional): 文件编码喵～默认'utf-8'～
+        indent (int, optional): JSON缩进空格数喵～默认4～
+    """
+    # 杂鱼♡～本喵现在支持Path对象了喵～
+    path = Path(output_path)
+
+    if not path or not str(path):
+        raise ValueError("杂鱼♡～输出路径无效喵！～")
+
+    if indent < 0:
+        raise ValueError("杂鱼♡～缩进必须是非负数喵！～负数是什么意思啦～")
+
+    # 获取输出文件的绝对路径喵～
+    abs_path = path.absolute()
+    directory = abs_path.parent
+
+    try:
+        # 确保目录存在且可写喵～
+        ensure_directory_exists(str(directory))
+
+        # 杂鱼♡～使用新架构序列化喵～
+        json_str = jsdc_dumps_new(obj, indent)
+
+        # 杂鱼♡～使用临时文件进行安全写入喵～
+        temp_file = tempfile.NamedTemporaryFile(
+            prefix=f".{abs_path.name}.",
+            dir=str(directory),
+            suffix=".tmp",
+            delete=False,
+            mode="w",
+            encoding=encoding,
+        )
+
+        temp_path = temp_file.name
+        try:
+            temp_file.write(json_str)
+            temp_file.flush()
+            os.fsync(temp_file.fileno())
+            temp_file.close()
+
+            if abs_path.exists():
+                abs_path.unlink()
+
+            os.rename(temp_path, str(abs_path))
+        except Exception as e:
+            if os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                except OSError:
+                    pass
+            raise e
+
+    except OSError as e:
+        raise OSError(f"杂鱼♡～创建目录或访问文件失败喵：{str(e)}～")
+    except (ValueError, TypeError) as e:
+        # 杂鱼♡～让类型和值错误直接传播，这是期望的行为喵～
+        raise e
     except Exception as e:
         raise ValueError(f"杂鱼♡～序列化过程中出错喵：{str(e)}～")

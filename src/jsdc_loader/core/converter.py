@@ -7,12 +7,6 @@ from decimal import Decimal
 from enum import Enum
 from typing import Any, Type, Union, get_args, get_origin
 
-from .compat import (
-    create_pydantic_from_dict,
-    is_pydantic_instance,
-    is_pydantic_model,
-    pydantic_to_dict,
-)
 from .types import T, _DATACLASS_CACHE, _SPECIAL_TYPE_CACHE, _GET_ORIGIN_CACHE, _GET_ARGS_CACHE, _TYPE_CHECK_CACHE
 from .validator import get_cached_type_hints, validate_type
 
@@ -46,9 +40,21 @@ def cached_isinstance(obj: Any, cls: Type) -> bool:
 def convert_enum(key: str, value: Any, enum_type: Type[Enum]) -> Enum:
     """Convert a string value to an Enum member."""
     try:
-        return enum_type[value]
-    except KeyError:
-        raise ValueError(f"Invalid Enum value for key {key}: {value}")
+        # 杂鱼♡～导入枚举类型喵～
+        from enum import Flag, IntFlag
+        
+        # 杂鱼♡～处理 Flag/IntFlag 枚举喵～
+        if issubclass(enum_type, (Flag, IntFlag)):
+            # 杂鱼♡～Flag/IntFlag 使用数值进行反序列化喵～
+            if isinstance(value, int):
+                return enum_type(value)
+            else:
+                raise ValueError(f"杂鱼♡～Flag/IntFlag 类型 {enum_type} 需要整数值，得到 {type(value)} 喵！～")
+        else:
+            # 杂鱼♡～普通枚举使用名称进行反序列化喵～
+            return enum_type[value]
+    except (KeyError, ValueError) as e:
+        raise ValueError(f"Invalid Enum value for key {key}: {value}") from e
 
 
 def convert_union_type(key: str, value: Any, union_type: Any) -> Any:
@@ -103,6 +109,8 @@ def _is_exact_type_match(value: Any, expected_type: Any) -> bool:
         return isinstance(value, dict)
     elif origin is set:
         return isinstance(value, set)
+    elif origin is frozenset:
+        return isinstance(value, frozenset)
     elif origin is tuple:
         return isinstance(value, tuple)
     elif expected_type is list:
@@ -111,6 +119,8 @@ def _is_exact_type_match(value: Any, expected_type: Any) -> bool:
         return isinstance(value, dict)
     elif expected_type is set:
         return isinstance(value, set)
+    elif expected_type is frozenset:
+        return isinstance(value, frozenset)
     elif expected_type is tuple:
         return isinstance(value, tuple)
 
@@ -132,7 +142,19 @@ def convert_simple_type(key: str, value: Any, e_type: Any) -> Any:
     if e_type is Any:
         return value
     elif isinstance(e_type, type) and issubclass(e_type, Enum):
-        return e_type[value]
+        # 杂鱼♡～导入枚举类型喵～
+        from enum import Flag, IntFlag
+        
+        # 杂鱼♡～处理 Flag/IntFlag 枚举喵～
+        if issubclass(e_type, (Flag, IntFlag)):
+            # 杂鱼♡～Flag/IntFlag 使用数值进行反序列化喵～
+            if isinstance(value, int):
+                return e_type(value)
+            else:
+                raise ValueError(f"杂鱼♡～Flag/IntFlag 类型 {e_type} 需要整数值，得到 {type(value)} 喵！～")
+        else:
+            # 杂鱼♡～普通枚举使用名称进行反序列化喵～
+            return e_type[value]
     elif e_type == dict or cached_get_origin(e_type) == dict:
         # Handle dict type properly
         return value
@@ -174,22 +196,99 @@ def convert_simple_type(key: str, value: Any, e_type: Any) -> Any:
 
 def convert_dict_type(key: str, value: dict, e_type: Any) -> dict:
     """Convert a dictionary based on its type annotation."""
+    # 杂鱼♡～首先检查是否为序列化的defaultdict数据喵～
+    if isinstance(value, dict) and value.get("__type__") == "defaultdict":
+        # 杂鱼♡～处理序列化的defaultdict数据，但返回普通dict（因为目标类型是Dict）喵～
+        from collections import defaultdict
+        data = value["__data__"]
+        factory_name = value.get("__default_factory__")
+        
+        # 杂鱼♡～重建默认工厂喵～
+        if factory_name == "list":
+            factory = list
+        elif factory_name == "dict":
+            factory = dict
+        elif factory_name == "set":
+            factory = set
+        elif factory_name == "int":
+            factory = int
+        else:
+            factory = None
+        
+        # 杂鱼♡～获取键值类型喵～
+        from typing import Any
+        key_type, val_type = cached_get_args(e_type) if cached_get_args(e_type) else (str, Any)
+        
+        # 杂鱼♡～转换为普通字典（因为目标类型是Dict不是defaultdict）喵～
+        result = {}
+        for str_key, value_data in data.items():
+            # 杂鱼♡～转换键类型喵～
+            if key_type == str:
+                converted_key = str_key
+            elif key_type == int:
+                converted_key = int(str_key)
+            elif key_type == float:
+                converted_key = float(str_key)
+            elif key_type == bool:
+                converted_key = str_key.lower() in ("true", "1")
+            else:
+                converted_key = str_key
+            
+            # 杂鱼♡～转换值类型喵～
+            converted_value = convert_value(f"{key}[{str_key}]", value_data, val_type)
+            result[converted_key] = converted_value
+        
+        return result
+    
     if cached_get_origin(e_type) is dict:
         key_type, val_type = cached_get_args(e_type)
 
         # 杂鱼♡～本喵扩展支持更多键类型了喵～
-        # 支持字符串、整数、浮点数等基本类型作为键
-        supported_key_types = (str, int, float, bool)
-        if key_type not in supported_key_types:
+        # 支持字符串、整数、浮点数、UUID、Literal等基本类型作为键
+        from typing import get_origin, get_args
+        
+        # 杂鱼♡～检查是否为 Literal 类型喵～
+        is_literal_key = False
+        if hasattr(key_type, '__origin__'):
+            # 杂鱼♡～对于 Python 3.8+ 的 Literal 类型喵～
+            if str(key_type).startswith('typing.Literal'):
+                is_literal_key = True
+        elif str(key_type).startswith('typing_extensions.Literal'):
+            # 杂鱼♡～对于较老版本的 typing_extensions 喵～
+            is_literal_key = True
+        
+        supported_key_types = (str, int, float, bool, uuid.UUID)
+        
+        # 杂鱼♡～检查是否为 Enum/Flag 类型键喵～
+        is_enum_key = False
+        if isinstance(key_type, type) and issubclass(key_type, Enum):
+            is_enum_key = True
+        
+        if not is_literal_key and not is_enum_key and key_type not in supported_key_types:
             raise ValueError(
-                f"杂鱼♡～字典键类型 {key_type} 暂不支持喵！支持的键类型: {supported_key_types}～"
+                f"杂鱼♡～字典键类型 {key_type} 暂不支持喵！支持的键类型: {supported_key_types}，以及Literal和Enum类型～"
             )
 
         # 杂鱼♡～如果键类型不是字符串，需要转换JSON中的字符串键为目标类型喵～
         converted_dict = {}
         for k, v in value.items():
             # 杂鱼♡～JSON中的键总是字符串，需要转换为目标键类型喵～
-            if key_type == str:
+            if is_literal_key:
+                # 杂鱼♡～Literal 类型的键保持为字符串喵～
+                converted_key = k
+            elif is_enum_key:
+                # 杂鱼♡～Enum/Flag 类型的键需要反序列化喵～
+                from enum import Flag, IntFlag
+                try:
+                    if issubclass(key_type, (Flag, IntFlag)):
+                        # 杂鱼♡～Flag/IntFlag 使用数值喵～
+                        converted_key = key_type(int(k))
+                    else:
+                        # 杂鱼♡～普通枚举使用名称喵～
+                        converted_key = key_type[k]
+                except (ValueError, KeyError):
+                    raise ValueError(f"杂鱼♡～无法将键 '{k}' 转换为 {key_type} 喵！～")
+            elif key_type == str:
                 converted_key = k
             elif key_type == int:
                 try:
@@ -208,6 +307,11 @@ def convert_dict_type(key: str, value: dict, e_type: Any) -> dict:
                     converted_key = False
                 else:
                     raise ValueError(f"杂鱼♡～无法将键 '{k}' 转换为布尔值喵！～")
+            elif key_type == uuid.UUID:
+                try:
+                    converted_key = uuid.UUID(k)
+                except ValueError:
+                    raise ValueError(f"杂鱼♡～无法将键 '{k}' 转换为UUID喵！～")
             else:
                 converted_key = k  # 杂鱼♡～其他情况保持原样喵～
 
@@ -270,13 +374,9 @@ def convert_value(key: str, value: Any, e_type: Any) -> Any:
 
     # 杂鱼♡～处理容器类型喵～优化顺序以处理最常见的类型～
     if origin is list or e_type == list:
-        if args and (is_dataclass(args[0]) or is_pydantic_model(args[0])):
+        if args and is_dataclass(args[0]):
             return [
-                (
-                    convert_dict_to_dataclass(item, args[0])
-                    if is_dataclass(args[0])
-                    else create_pydantic_from_dict(args[0], item)
-                )
+                convert_dict_to_dataclass(item, args[0])
                 for item in value
             ]
         elif args:
@@ -295,8 +395,29 @@ def convert_value(key: str, value: Any, e_type: Any) -> Any:
             else:
                 return set(value)
         return value
+    elif origin is frozenset or e_type is frozenset:
+        # 杂鱼♡～处理 frozenset 类型喵～
+        if isinstance(value, dict) and value.get("__type__") == "frozenset":
+            # 杂鱼♡～从序列化的字典恢复 frozenset 喵～
+            items_data = value["__data__"]
+            if args:
+                element_type = args[0]
+                return frozenset(convert_value(f"{key}[*]", item, element_type) for item in items_data)
+            else:
+                return frozenset(items_data)
+        elif isinstance(value, list):
+            if args:
+                element_type = args[0]
+                return frozenset(convert_value(f"{key}[*]", item, element_type) for item in value)
+            else:
+                return frozenset(value)
+        return value
     elif origin is tuple or e_type is tuple:
-        if isinstance(value, list):
+        if isinstance(value, dict) and value.get("__type__") == "tuple":
+            # 杂鱼♡～处理从JSON反序列化的特殊tuple格式喵～
+            tuple_data = value["__data__"]
+            return convert_tuple_type(key, tuple_data, e_type)
+        elif isinstance(value, list):
             return convert_tuple_type(key, value, e_type)
         return value
     elif origin is Union:
@@ -305,10 +426,108 @@ def convert_value(key: str, value: Any, e_type: Any) -> Any:
         return convert_enum(key, value, e_type)
     elif is_dataclass(e_type):
         return convert_dict_to_dataclass(value, e_type)
-    elif is_pydantic_model(e_type):
-        # 杂鱼♡～处理 Pydantic 模型喵～
-        return create_pydantic_from_dict(e_type, value)
     else:
+        # 杂鱼♡～处理其他复杂类型喵～
+        from collections import deque, defaultdict
+        
+        # 杂鱼♡～处理 deque 类型喵～
+        if hasattr(e_type, '__origin__') and e_type.__origin__ is deque:
+            if isinstance(value, dict) and value.get("__type__") == "deque":
+                # 杂鱼♡～从序列化的字典恢复 deque 喵～
+                items_data = value["__data__"]
+                maxlen = value.get("__maxlen__")
+                args = cached_get_args(e_type)
+                if args:
+                    element_type = args[0]
+                    converted_items = [convert_value(f"{key}[{i}]", item, element_type) for i, item in enumerate(items_data)]
+                else:
+                    converted_items = items_data
+                return deque(converted_items, maxlen=maxlen)
+            elif isinstance(value, list):
+                args = cached_get_args(e_type)
+                if args:
+                    element_type = args[0]
+                    converted_items = [convert_value(f"{key}[{i}]", item, element_type) for i, item in enumerate(value)]
+                else:
+                    converted_items = value
+                return deque(converted_items)
+            return value
+        elif e_type is deque:
+            if isinstance(value, dict) and value.get("__type__") == "deque":
+                items_data = value["__data__"]
+                maxlen = value.get("__maxlen__")
+                return deque(items_data, maxlen=maxlen)
+            elif isinstance(value, list):
+                return deque(value)
+            return value
+        
+        # 杂鱼♡～处理 defaultdict 类型喵～
+        elif hasattr(e_type, '__origin__') and e_type.__origin__ is defaultdict:
+            if isinstance(value, dict) and value.get("__type__") == "defaultdict":
+                # 杂鱼♡～从序列化的字典恢复 defaultdict 喵～
+                data = value["__data__"]
+                factory_name = value.get("__default_factory__")
+                
+                # 杂鱼♡～重建默认工厂喵～
+                if factory_name == "list":
+                    factory = list
+                elif factory_name == "dict":
+                    factory = dict
+                elif factory_name == "set":
+                    factory = set
+                elif factory_name == "int":
+                    factory = int
+                else:
+                    factory = None
+                
+                result = defaultdict(factory)
+                args = cached_get_args(e_type)
+                if len(args) >= 2:
+                    key_type, val_type = args[0], args[1]
+                    for k, v in data.items():
+                        # 杂鱼♡～转换键和值的类型喵～
+                        converted_key = convert_value(f"{key}.key", k, key_type) if key_type != str else k
+                        converted_val = convert_value(f"{key}[{k}]", v, val_type)
+                        result[converted_key] = converted_val
+                else:
+                    result.update(data)
+                return result
+            elif isinstance(value, dict):
+                args = cached_get_args(e_type)
+                if len(args) >= 2:
+                    key_type, val_type = args[0], args[1]
+                    result = defaultdict()
+                    for k, v in value.items():
+                        converted_key = convert_value(f"{key}.key", k, key_type) if key_type != str else k
+                        converted_val = convert_value(f"{key}[{k}]", v, val_type)
+                        result[converted_key] = converted_val
+                    return result
+                else:
+                    return defaultdict(lambda: None, value)
+            return value
+        elif e_type is defaultdict:
+            if isinstance(value, dict) and value.get("__type__") == "defaultdict":
+                data = value["__data__"]
+                factory_name = value.get("__default_factory__")
+                
+                if factory_name == "list":
+                    factory = list
+                elif factory_name == "dict":
+                    factory = dict
+                elif factory_name == "set":
+                    factory = set
+                elif factory_name == "int":
+                    factory = int
+                else:
+                    factory = None
+                
+                result = defaultdict(factory)
+                result.update(data)
+                return result
+            elif isinstance(value, dict):
+                return defaultdict(lambda: None, value)
+            return value
+        
         return convert_simple_type(key, value, e_type)
 
 
@@ -326,10 +545,6 @@ def convert_dict_to_dataclass(data: dict, cls: T) -> T:
     """Convert a dictionary to a dataclass instance."""
     if not data:
         raise ValueError("Empty data dictionary")
-
-    if is_pydantic_model(cls):
-        # 杂鱼♡～使用兼容层来创建 Pydantic 模型喵～
-        return create_pydantic_from_dict(cls, data)
 
     # 杂鱼♡～无论是否为frozen dataclass，都使用构造函数方式创建实例喵～这样更安全～
     init_kwargs = {}
@@ -370,6 +585,10 @@ def get_special_type(obj) -> str:
     if obj_type in _SPECIAL_TYPE_CACHE:
         return _SPECIAL_TYPE_CACHE[obj_type]
     
+    # 杂鱼♡～导入需要的类型喵～
+    from collections import deque, defaultdict
+    from enum import Flag, IntFlag
+    
     # 杂鱼♡～检查特殊类型并缓存结果喵～
     if obj_type is datetime.datetime:
         result = "datetime"
@@ -387,10 +606,18 @@ def get_special_type(obj) -> str:
         result = "tuple"
     elif obj_type is set:
         result = "set"
+    elif obj_type is frozenset:
+        result = "frozenset"
     elif obj_type is list:
         result = "list"
     elif obj_type is dict:
         result = "dict"
+    elif obj_type is deque:
+        result = "deque"
+    elif obj_type is defaultdict:
+        result = "defaultdict"
+    elif issubclass(obj_type, (Flag, IntFlag)):
+        result = "flag"  # 杂鱼♡～专门为Flag/IntFlag类型添加支持喵～
     elif issubclass(obj_type, Enum):
         result = "enum"
     else:
@@ -443,6 +670,124 @@ def convert_dataclass_to_dict(
         ]
     elif special_type == "enum":
         return obj.name
+    elif special_type == "flag":
+        # 杂鱼♡～Flag/IntFlag 枚举使用数值序列化喵～
+        return obj.value
+    elif special_type == "frozenset":
+        # 杂鱼♡～frozenset 需要特殊处理，转换为带类型标记的字典喵～
+        element_type = None
+        if parent_type and cached_get_origin(parent_type) is frozenset and cached_get_args(parent_type):
+            element_type = cached_get_args(parent_type)[0]
+
+        result = []
+        for i, item in enumerate(obj):
+            # 杂鱼♡～验证元素类型喵～
+            if element_type:
+                item_key = f"{parent_key or 'frozenset'}[{i}]"
+                try:
+                    validate_type(item_key, item, element_type)
+                except (TypeError, ValueError) as e:
+                    raise TypeError(
+                        f"杂鱼♡～序列化时frozenset元素类型验证失败喵：{item_key} {str(e)}～"
+                    )
+
+            result.append(
+                convert_dataclass_to_dict(item, f"{parent_key}[{i}]", element_type)
+            )
+
+        # 杂鱼♡～返回带类型标记的字典，方便反序列化时恢复喵～
+        return {
+            "__type__": "frozenset",
+            "__data__": result
+        }
+    elif special_type == "deque":
+        # 杂鱼♡～deque 需要保存 maxlen 信息喵～
+        from collections import deque
+        
+        element_type = None
+        if parent_type and hasattr(parent_type, '__origin__') and parent_type.__origin__ is deque:
+            args = cached_get_args(parent_type)
+            if args:
+                element_type = args[0]
+
+        result = []
+        for i, item in enumerate(obj):
+            result.append(
+                convert_dataclass_to_dict(item, f"{parent_key}[{i}]", element_type)
+            )
+
+        return {
+            "__type__": "deque",
+            "__data__": result,
+            "__maxlen__": obj.maxlen
+        }
+    elif special_type == "defaultdict":
+        # 杂鱼♡～defaultdict 需要保存 default_factory 信息喵～
+        from collections import defaultdict
+        
+        key_type, val_type = None, None
+        if parent_type and hasattr(parent_type, '__origin__') and parent_type.__origin__ is defaultdict:
+            args = cached_get_args(parent_type)
+            if len(args) >= 2:
+                key_type, val_type = args[0], args[1]
+
+        result = {}
+        for k, v in obj.items():
+            # 杂鱼♡～首先验证键和值的类型喵～
+            if key_type:
+                key_validation_name = f"{parent_key or 'defaultdict'}.key"
+                try:
+                    validate_type(key_validation_name, k, key_type)
+                except (TypeError, ValueError) as e:
+                    raise TypeError(
+                        f"杂鱼♡～序列化时defaultdict键类型验证失败喵：{key_validation_name} {str(e)}～"
+                    )
+            
+            if val_type:
+                val_validation_name = f"{parent_key or 'defaultdict'}[{k}]"
+                try:
+                    validate_type(val_validation_name, v, val_type)
+                except (TypeError, ValueError) as e:
+                    raise TypeError(
+                        f"杂鱼♡～序列化时defaultdict值类型验证失败喵：{val_validation_name} {str(e)}～"
+                    )
+            
+            # 杂鱼♡～将键转换为字符串以支持JSON序列化喵～
+            # JSON只支持字符串键，所以本喵需要将其他类型的键转换为字符串～
+            if isinstance(k, Enum):
+                # 杂鱼♡～枚举键需要特殊处理喵～
+                from enum import Flag, IntFlag
+                if isinstance(k, (Flag, IntFlag)):
+                    # 杂鱼♡～Flag/IntFlag 使用数值作为键喵～
+                    json_key = str(k.value)
+                else:
+                    # 杂鱼♡～普通枚举使用名称作为键喵～
+                    json_key = k.name
+            else:
+                json_key = str(k)
+            result[json_key] = convert_dataclass_to_dict(
+                v, f"{parent_key}[{k}]", val_type
+            )
+
+        # 杂鱼♡～尝试获取默认工厂类型喵～
+        default_factory_name = None
+        if obj.default_factory is not None:
+            if obj.default_factory is list:
+                default_factory_name = "list"
+            elif obj.default_factory is dict:
+                default_factory_name = "dict"
+            elif obj.default_factory is set:
+                default_factory_name = "set"
+            elif obj.default_factory is int:
+                default_factory_name = "int"
+            else:
+                default_factory_name = str(obj.default_factory)
+
+        return {
+            "__type__": "defaultdict",
+            "__data__": result,
+            "__default_factory__": default_factory_name
+        }
     elif special_type == "set":
         # 杂鱼♡～需要检查集合中元素的类型喵～
         element_type = None
@@ -522,18 +867,25 @@ def convert_dataclass_to_dict(
 
             # 杂鱼♡～将键转换为字符串以支持JSON序列化喵～
             # JSON只支持字符串键，所以本喵需要将其他类型的键转换为字符串～
-            json_key = str(k)
+            if isinstance(k, Enum):
+                # 杂鱼♡～枚举键需要特殊处理喵～
+                from enum import Flag, IntFlag
+                if isinstance(k, (Flag, IntFlag)):
+                    # 杂鱼♡～Flag/IntFlag 使用数值作为键喵～
+                    json_key = str(k.value)
+                else:
+                    # 杂鱼♡～普通枚举使用名称作为键喵～
+                    json_key = k.name
+            else:
+                json_key = str(k)
             result[json_key] = convert_dataclass_to_dict(
                 v, f"{parent_key}[{k}]", val_type
             )
 
         return result
 
-    # 杂鱼♡～检查 pydantic 和 dataclass，但用缓存版本喵～
-    if is_pydantic_instance(obj):
-        # 杂鱼♡～使用兼容层来转换 Pydantic 实例喵～
-        return pydantic_to_dict(obj)
-    elif fast_is_dataclass(obj):
+    # 杂鱼♡～检查 dataclass，但用缓存版本喵～
+    if fast_is_dataclass(obj):
         result = {}
         t_hints = get_cached_type_hints(type(obj))
         for key, value in vars(obj).items():

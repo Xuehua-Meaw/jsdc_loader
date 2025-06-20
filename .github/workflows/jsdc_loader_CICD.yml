@@ -64,17 +64,9 @@ jobs:
         mypy src/jsdc_loader --ignore-missing-imports || echo "杂鱼♡～类型注解需要改进，但本喵不会阻止你喵～"
         
     - name: Test with pytest (basic dependencies)
-      # 杂鱼♡～本喵先测试基础功能，不依赖pydantic喵～
+      # 杂鱼♡～本喵测试基础功能喵～
       run: |
-        # 杂鱼♡～先卸载pydantic测试基础功能喵～
-        pip uninstall pydantic -y || true
-        # 杂鱼♡～运行所有测试，没有pydantic的测试会被自动跳过喵～
-        python -m pytest src/jsdc_loader/tests.py -v -k "not test_pydantic"
-        
-    - name: Test with pytest (full dependencies)
-      # 杂鱼♡～本喵再测试完整功能，包括pydantic支持喵～
-      run: |
-        pip install "pydantic>=1.8.0"
+        # 杂鱼♡～运行所有测试喵～
         python -m pytest src/jsdc_loader/tests.py -v --cov=src/jsdc_loader --cov-report=xml --cov-report=term-missing
         
     - name: Upload coverage to Codecov
