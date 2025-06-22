@@ -67,9 +67,9 @@ def get_cached_type_hints(cls: Type) -> Dict[str, Any]:
 def validate_dataclass(cls: Any) -> None:
     """杂鱼♡～本喵帮你验证提供的类是否为dataclass或BaseModel喵～杂鱼总是分不清这些～"""
     if not cls:
-        raise TypeError("杂鱼♡～data_class不能为None喵！～")
+        raise TypeError("data_class cannot be None")
     if not (is_dataclass(cls)):
-        raise TypeError("杂鱼♡～data_class必须是dataclass喵！～")
+        raise TypeError("data_class must be a dataclass")
 
 
 def validate_type(key: str, value: Any, e_type: Any) -> None:
@@ -88,11 +88,11 @@ def validate_type(key: str, value: Any, e_type: Any) -> None:
     # 如果期望类型是int但值是bool，或者期望类型是bool但值是int，都要报错喵～
     if e_type is int and value_type is bool:
         raise TypeError(
-            f"杂鱼♡～键{key}的类型无效喵：期望<class 'int'>，得到<class 'bool'>～bool不能当int用喵～"
+            f"Invalid type for key {key}: expected <class 'int'>, got <class 'bool'> - bool cannot be used as int"
         )
     elif e_type is bool and value_type is int:
         raise TypeError(
-            f"杂鱼♡～键{key}的类型无效喵：期望<class 'bool'>，得到<class 'int'>～int不能当bool用喵～"
+            f"Invalid type for key {key}: expected <class 'bool'>, got <class 'int'> - int cannot be used as bool"
         )
 
     o_type = cached_get_origin(e_type)
@@ -122,14 +122,14 @@ def validate_type(key: str, value: Any, e_type: Any) -> None:
 
         if not valid:
             raise TypeError(
-                f"杂鱼♡～键{key}的类型无效喵：期望{e_type}，得到{type(value)}～你连类型都搞不清楚吗？～"
+                f"Invalid type for key {key}: expected {e_type}, got {type(value)} - you cannot even tell the type"
             )
 
     # 杂鱼♡～对于列表类型，本喵需要检查容器类型和内容类型喵～
     elif o_type is list or o_type is List:
         if not isinstance(value, list):
             raise TypeError(
-                f"杂鱼♡～键{key}的类型无效喵：期望list，得到{type(value)}～真是个笨蛋呢～"
+                f"Invalid type for key {key}: expected list, got {type(value)} - you are a fool"
             )
 
         # 杂鱼♡～检查列表元素类型喵～
@@ -141,14 +141,14 @@ def validate_type(key: str, value: Any, e_type: Any) -> None:
                     validate_type(f"{key}[{i}]", item, element_type)
                 except (TypeError, ValueError) as e:
                     raise TypeError(
-                        f"杂鱼♡～列表{key}的第{i}个元素类型无效喵：{str(e)}"
+                        f"Invalid type for list {key} at index {i}: {str(e)}"
                     )
 
     # 杂鱼♡～对于集合类型，本喵也需要检查内容类型喵～
     elif o_type is set or o_type is Set:
         if not isinstance(value, set):
             raise TypeError(
-                f"杂鱼♡～键{key}的类型无效喵：期望set，得到{type(value)}～真是个笨蛋呢～"
+                f"Invalid type for key {key}: expected set, got {type(value)} - you are a fool"
             )
 
         # 杂鱼♡～检查集合元素类型喵～
@@ -159,13 +159,13 @@ def validate_type(key: str, value: Any, e_type: Any) -> None:
                 try:
                     validate_type(f"{key}[{i}]", item, element_type)
                 except (TypeError, ValueError) as e:
-                    raise TypeError(f"杂鱼♡～集合{key}的某个元素类型无效喵：{str(e)}")
+                    raise TypeError(f"Invalid type for set {key}: {str(e)}")
 
     # 杂鱼♡～对于字典类型，本喵需要检查键和值的类型喵～
     elif o_type is dict:
         if not isinstance(value, dict):
             raise TypeError(
-                f"杂鱼♡～键{key}的类型无效喵：期望dict，得到{type(value)}～真是个笨蛋呢～"
+                f"Invalid type for key {key}: expected dict, got {type(value)} - you are a fool"
             )
 
         # 杂鱼♡～检查字典键和值的类型喵～
@@ -176,18 +176,18 @@ def validate_type(key: str, value: Any, e_type: Any) -> None:
                 try:
                     validate_type(f"{key}.key", k, key_type)
                 except (TypeError, ValueError) as e:
-                    raise TypeError(f"杂鱼♡～字典{key}的键类型无效喵：{str(e)}")
+                    raise TypeError(f"Invalid type for dictionary {key} key: {str(e)}")
 
                 try:
                     validate_type(f"{key}[{k}]", v, val_type)
                 except (TypeError, ValueError) as e:
-                    raise TypeError(f"杂鱼♡～字典{key}的值类型无效喵：{str(e)}")
+                    raise TypeError(f"Invalid type for dictionary {key} value: {str(e)}")
 
     # 杂鱼♡～对于元组类型，本喵也需要特殊处理喵～
     elif o_type is tuple or o_type is Tuple:
         if not isinstance(value, tuple):
             raise TypeError(
-                f"杂鱼♡～键{key}的类型无效喵：期望tuple，得到{type(value)}～真是个笨蛋呢～"
+                f"Invalid type for key {key}: expected tuple, got {type(value)}"
             )
 
         args = cached_get_args(e_type)
@@ -202,13 +202,13 @@ def validate_type(key: str, value: Any, e_type: Any) -> None:
                     validate_type(f"{key}[{i}]", item, element_type)
                 except (TypeError, ValueError) as e:
                     raise TypeError(
-                        f"杂鱼♡～元组{key}的第{i}个元素类型无效喵：{str(e)}"
+                        f"Invalid type for tuple {key} at index {i}: {str(e)}"
                     )
         else:
             # Tuple[X, Y, Z] 形式，长度和类型都固定
             if len(value) != len(args):
                 raise TypeError(
-                    f"杂鱼♡～元组{key}的长度无效喵：期望{len(args)}，得到{len(value)}～"
+                    f"Invalid length for tuple {key}: expected {len(args)}, got {len(value)}"
                 )
 
             for i, (item, arg_type) in enumerate(zip(value, args)):
@@ -216,7 +216,7 @@ def validate_type(key: str, value: Any, e_type: Any) -> None:
                     validate_type(f"{key}[{i}]", item, arg_type)
                 except (TypeError, ValueError) as e:
                     raise TypeError(
-                        f"杂鱼♡～元组{key}的第{i}个元素类型无效喵：{str(e)}"
+                        f"Invalid type for tuple {key} at index {i}: {str(e)}"
                     )
 
     # 杂鱼♡～对于Literal类型，需要特殊处理喵～
@@ -225,7 +225,7 @@ def validate_type(key: str, value: Any, e_type: Any) -> None:
         args = cached_get_args(e_type)
         if value not in args:
             raise TypeError(
-                f"杂鱼♡～键{key}的值无效喵：期望{args}中的一个，得到{value}～"
+                f"Invalid value for key {key}: expected one of {args}, got {value}"
             )
         return
 
@@ -236,7 +236,7 @@ def validate_type(key: str, value: Any, e_type: Any) -> None:
         try:
             if not isinstance(value, o_type):
                 raise TypeError(
-                    f"杂鱼♡～键{key}的类型无效喵：期望{o_type}，得到{type(value)}～真是个笨蛋呢～"
+                    f"Invalid type for key {key}: expected {o_type}, got {type(value)}"
                 )
         except TypeError as e:
             # 杂鱼♡～如果isinstance失败，可能是特殊类型，跳过检查喵～
@@ -255,14 +255,14 @@ def validate_type(key: str, value: Any, e_type: Any) -> None:
                     # 字符串值匹配枚举名，可以接受喵～
                     return
                 raise TypeError(
-                    f"杂鱼♡～键{key}的类型无效喵：期望{e_type}，得到{type(value)}～"
+                    f"Invalid type for key {key}: expected {e_type}, got {type(value)}"
                 )
         elif e_type is not Any:
             # 杂鱼♡～对于可能不支持isinstance的类型，使用try-except处理喵～
             try:
                 if not isinstance(value, e_type):
                     raise TypeError(
-                        f"杂鱼♡～键{key}的类型无效喵：期望{e_type}，得到{type(value)}～"
+                        f"Invalid type for key {key}: expected {e_type}, got {type(value)}"
                     )
             except TypeError as e:
                 # 杂鱼♡～如果isinstance失败，可能是特殊的类型注解喵～

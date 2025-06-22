@@ -51,7 +51,7 @@ class BasicTypeHandler(TypeHandler):
         if target_type in self.BASIC_TYPES:
             # 杂鱼♡～只接受完全匹配的类型，不进行任何转换喵～
             if not isinstance(data, target_type):
-                raise TypeError(f"杂鱼♡～期望 {target_type.__name__} 类型，但得到了 {type(data).__name__} 类型的值 '{data}' 喵～")
+                raise TypeError(f"Expected {target_type.__name__} type, but got {type(data).__name__} type with value '{data}'")
             return data
         
         return data
@@ -93,7 +93,7 @@ class EnumHandler(TypeHandler):
                     for enum_member in target_type:
                         if enum_member.value == data:
                             return enum_member
-                    raise ValueError(f"杂鱼♡～无法找到枚举值 {data} 对应的 {target_type} 成员喵～")
+                    raise ValueError(f"Cannot find enum value {data} corresponding to {target_type} member")
             else:
                 # 杂鱼♡～尝试从值创建喵～
                 return target_type(data)
@@ -125,17 +125,17 @@ class DateTimeHandler(TypeHandler):
             try:
                 return datetime.datetime.fromisoformat(data)
             except ValueError as e:
-                raise ValueError(f"杂鱼♡～无法解析datetime字符串 '{data}' 喵～: {str(e)}")
+                raise ValueError(f"Cannot parse datetime string '{data}': {str(e)}")
         elif target_type == datetime.date and isinstance(data, str):
             try:
                 return datetime.date.fromisoformat(data)
             except ValueError as e:
-                raise ValueError(f"杂鱼♡～无法解析date字符串 '{data}' 喵～: {str(e)}")
+                raise ValueError(f"Cannot parse date string '{data}': {str(e)}")
         elif target_type == datetime.time and isinstance(data, str):
             try:
                 return datetime.time.fromisoformat(data)
             except ValueError as e:
-                raise ValueError(f"杂鱼♡～无法解析time字符串 '{data}' 喵～: {str(e)}")
+                raise ValueError(f"Cannot parse time string '{data}': {str(e)}")
         elif target_type == datetime.timedelta and isinstance(data, (int, float)):
             return datetime.timedelta(seconds=data)
         elif target_type == datetime.timedelta and isinstance(data, dict):
@@ -227,7 +227,7 @@ class CollectionHandler(TypeHandler):
         if origin in (list, set, frozenset, tuple) or target_type in (list, set, frozenset, tuple):
             # 杂鱼♡～对于集合类型，数据应该是列表或带__type__标记的字典喵～
             if not isinstance(data, list) and not (isinstance(data, dict) and "__type__" in data):
-                raise TypeError(f"杂鱼♡～期望 {target_type} 类型，但得到了 {type(data).__name__} 类型的值 '{data}' 喵～")
+                raise TypeError(f"Expected {target_type} type, but got {type(data).__name__} type with value '{data}'")
         
         # 杂鱼♡～处理带类型标记的数据喵～
         if isinstance(data, dict) and "__type__" in data:
@@ -463,7 +463,7 @@ class DataclassHandler(TypeHandler):
                 try:
                     self._validate_field_type(field_name, field_value, field_type)
                 except TypeError as e:
-                    raise TypeError(f"杂鱼♡～字段 '{field_name}' 类型验证失败喵～: {str(e)}")
+                    raise TypeError(f"Field '{field_name}' type validation failed: {str(e)}")
             
             result[field_name] = TypeHandlerRegistry.serialize(field_value, field_type)
         
@@ -510,7 +510,7 @@ class LiteralHandler(TypeHandler):
         if data in args:
             return data
         else:
-            raise ValueError(f"杂鱼♡～值 {data} 不在Literal {args} 允许的值中喵～")
+            raise ValueError(f"Value {data} is not in the allowed values of Literal {args}")
 
 
 class UnionHandler(TypeHandler):

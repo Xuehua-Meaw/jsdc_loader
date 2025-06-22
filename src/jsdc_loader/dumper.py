@@ -101,7 +101,7 @@ def jsdc_dumps(obj: T, indent: int = 4, use_v2: bool = False) -> str:
         ValueError: 如果序列化过程中出错，本喵会生气地抛出错误喵！～
     """
     if indent < 0:
-        raise ValueError("杂鱼♡～缩进必须是非负数喵！～负数是什么意思啦～")
+        raise ValueError("Indent must be non-negative")
 
     # 杂鱼♡～如果使用V2架构，直接调用新的处理器系统喵～
     if use_v2:
@@ -109,10 +109,10 @@ def jsdc_dumps(obj: T, indent: int = 4, use_v2: bool = False) -> str:
 
     try:
         if isinstance(obj, type):
-            raise TypeError("杂鱼♡～obj必须是实例而不是类喵！～你真是搞不清楚呢～")
+            raise TypeError("obj must be an instance, not a class")
 
         if not is_dataclass(obj):
-            raise TypeError("杂鱼♡～obj必须是dataclass实例喵！～")
+            raise TypeError("obj must be a dataclass instance")
 
         # 获取对象的类型提示
         obj_type = type(obj)
@@ -125,9 +125,9 @@ def jsdc_dumps(obj: T, indent: int = 4, use_v2: bool = False) -> str:
             data_dict, ensure_ascii=False, indent=indent, cls=JSDCJSONEncoder
         )
     except TypeError as e:
-        raise TypeError(f"杂鱼♡～类型验证失败喵：{str(e)}～真是个笨蛋呢～")
+        raise TypeError(f"Type validation failed: {str(e)}")
     except Exception as e:
-        raise ValueError(f"杂鱼♡～序列化过程中出错喵：{str(e)}～")
+        raise ValueError(f"Serialization error: {str(e)}")
 
 
 def jsdc_dump(
@@ -158,10 +158,10 @@ def jsdc_dump(
     path = Path(output_path)
 
     if not path or not str(path):
-        raise ValueError("杂鱼♡～输出路径无效喵！～")
+        raise ValueError("Invalid output path")
 
     if indent < 0:
-        raise ValueError("杂鱼♡～缩进必须是非负数喵！～负数是什么意思啦～")
+        raise ValueError("Indent must be non-negative")
 
     # 获取输出文件的绝对路径喵～
     abs_path = path.absolute()
@@ -172,10 +172,10 @@ def jsdc_dump(
         ensure_directory_exists(str(directory))
 
         if isinstance(obj, type):
-            raise TypeError("杂鱼♡～obj必须是实例而不是类喵！～你真是搞不清楚呢～")
+            raise TypeError("obj must be an instance, not a class")
 
         if not is_dataclass(obj):
-            raise TypeError("杂鱼♡～obj必须是dataclass实例喵！～")
+            raise TypeError("obj must be a dataclass instance")
 
         # 杂鱼♡～先序列化为字符串喵～
         json_str = jsdc_dumps(obj, indent, use_v2)
@@ -218,12 +218,12 @@ def jsdc_dump(
             raise e  # 杂鱼♡～重新抛出原始异常喵～
 
     except OSError as e:
-        raise OSError(f"杂鱼♡～创建目录或访问文件失败喵：{str(e)}～")
+        raise OSError(f"Failed to create directory or access file: {str(e)}")
     except (ValueError, TypeError) as e:
         # 杂鱼♡～让类型和值错误直接传播，这是期望的行为喵～
         raise e
     except Exception as e:
-        raise ValueError(f"杂鱼♡～序列化过程中出错喵：{str(e)}～")
+        raise ValueError(f"Serialization error: {str(e)}")
 
 
 # 杂鱼♡～为了方便使用新架构，本喵提供专门的V2函数喵～
@@ -270,10 +270,10 @@ def jsdc_dump_new(
     path = Path(output_path)
 
     if not path or not str(path):
-        raise ValueError("杂鱼♡～输出路径无效喵！～")
+        raise ValueError("Invalid output path")
 
     if indent < 0:
-        raise ValueError("杂鱼♡～缩进必须是非负数喵！～负数是什么意思啦～")
+        raise ValueError("Indent must be non-negative")
 
     # 获取输出文件的绝对路径喵～
     abs_path = path.absolute()
@@ -316,9 +316,9 @@ def jsdc_dump_new(
             raise e
 
     except OSError as e:
-        raise OSError(f"杂鱼♡～创建目录或访问文件失败喵：{str(e)}～")
+        raise OSError(f"Failed to create directory or access file: {str(e)}")
     except (ValueError, TypeError) as e:
         # 杂鱼♡～让类型和值错误直接传播，这是期望的行为喵～
         raise e
     except Exception as e:
-        raise ValueError(f"杂鱼♡～序列化过程中出错喵：{str(e)}～")
+        raise ValueError(f"Serialization error: {str(e)}")

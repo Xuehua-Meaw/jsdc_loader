@@ -49,17 +49,17 @@ def jsdc_load(
 
         # 如果数据为空，杂鱼肯定是犯了错误喵～
         if not json_str:
-            raise ValueError("杂鱼♡～JSON文件为空喵！～")
+            raise ValueError("JSON file is empty")
 
         # 杂鱼♡～使用对应的加载方法喵～
         return jsdc_loads(json_str, target_class, use_v2)
 
     except UnicodeDecodeError as e:
         raise ValueError(
-            f"杂鱼♡～用{encoding}解码失败喵：{str(e)}～杂鱼是不是编码搞错了？～"
+            f"Failed to decode with {encoding} encoding: {str(e)}"
         )
     except Exception as e:
-        raise ValueError(f"杂鱼♡～加载或转换过程中出错喵：{str(e)}～")
+        raise ValueError(f"Loading or conversion error: {str(e)}")
 
 
 def jsdc_loads(json_str: str, target_class: Type[T], use_v2: bool = False) -> T:
@@ -78,7 +78,7 @@ def jsdc_loads(json_str: str, target_class: Type[T], use_v2: bool = False) -> T:
         TypeError: 如果target_class不是dataclass，杂鱼肯定传错类型了～
     """
     if not json_str:
-        raise ValueError("杂鱼♡～JSON字符串为空喵！～")
+        raise ValueError("JSON string is empty")
 
     # 杂鱼♡～如果使用V2架构，直接调用新的处理器系统喵～
     if use_v2:
@@ -92,14 +92,14 @@ def jsdc_loads(json_str: str, target_class: Type[T], use_v2: bool = False) -> T:
 
         # 如果数据为空，杂鱼肯定是犯了错误喵～
         if not json_data:
-            raise ValueError("杂鱼♡～JSON数据为空喵！～")
+            raise ValueError("JSON data is empty")
 
         # 转换数据为目标类型喵～
         return convert_dict_to_dataclass(json_data, target_class)
     except json.JSONDecodeError as e:
-        raise ValueError(f"杂鱼♡～无效的JSON喵：{str(e)}～")
+        raise ValueError(f"Invalid JSON: {str(e)}")
     except Exception as e:
-        raise ValueError(f"杂鱼♡～加载或转换过程中出错喵：{str(e)}～")
+        raise ValueError(f"Loading or conversion error: {str(e)}")
 
 
 # 杂鱼♡～为了方便使用新架构，本喵提供专门的V2函数喵～

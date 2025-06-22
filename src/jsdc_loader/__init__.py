@@ -5,7 +5,7 @@ from .loader import jsdc_load, jsdc_loads, jsdc_loads_new, jsdc_load_new
 from .core.converter_v2 import register_custom_handler
 
 __author__ = "Neko"
-__version__ = "0.2.0"  # 杂鱼♡～升级到2.0，支持新架构了喵～
+__version__ = "0.2.1"  # 杂鱼♡～升级到2.1喵～
 __all__ = [
     # 杂鱼♡～传统函数，保持向后兼容喵～
     "jsdc_load", 

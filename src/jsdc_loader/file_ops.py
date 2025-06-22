@@ -22,7 +22,7 @@ def ensure_directory_exists(directory_path: Union[str, Path]) -> None:
         try:
             path.mkdir(parents=True, exist_ok=True)
         except OSError as e:
-            raise OSError(f"杂鱼♡～创建目录失败喵：{path}，错误：{str(e)}～")
+            raise OSError(f"Failed to create directory: {path}, error: {str(e)}")
 
 
 # 杂鱼♡～本喵创建了一个支持复杂类型的JSON编码器喵～
@@ -73,19 +73,19 @@ def save_json_file(
                 data, f, ensure_ascii=False, indent=indent, cls=ComplexJSONEncoder
             )
     except OSError as e:
-        raise OSError(f"杂鱼♡～写入文件失败喵：{path}，错误：{str(e)}～")
+        raise OSError(f"Failed to write to file: {path}, error: {str(e)}")
     except TypeError as e:
-        raise TypeError(f"杂鱼♡～无法将数据序列化为JSON喵，错误：{str(e)}～")
+        raise TypeError(f"Failed to serialize data to JSON: {str(e)}")
     except UnicodeEncodeError as e:
         raise UnicodeEncodeError(
-            f"杂鱼♡～用{encoding}编码数据失败喵，错误：{str(e)}～",
+            f"Failed to encode data with {encoding} encoding: {str(e)}",
             e.object,
             e.start,
             e.end,
             e.reason,
         )
     except Exception as e:
-        raise ValueError(f"杂鱼♡～JSON序列化过程中出错喵：{str(e)}～")
+        raise ValueError(f"JSON serialization error: {str(e)}")
 
 
 def check_file_size(file_path: Union[str, Path], max_size: int) -> None:
@@ -105,16 +105,16 @@ def check_file_size(file_path: Union[str, Path], max_size: int) -> None:
     path = Path(file_path)
 
     if not path.exists():
-        raise FileNotFoundError(f"杂鱼♡～文件不存在喵：{path}～")
+        raise FileNotFoundError(f"File does not exist: {path}")
 
     if not path.is_file():
-        raise ValueError(f"杂鱼♡～路径不是文件喵：{path}～")
+        raise ValueError(f"Path is not a file: {path}")
 
     try:
         file_size = path.stat().st_size
         if file_size > max_size:
             raise ValueError(
-                f"杂鱼♡～文件大小超过限制喵！当前大小：{file_size}字节，最大允许：{max_size}字节～"
+                f"File size exceeds limit: {file_size} bytes, maximum allowed: {max_size} bytes"
             )
     except PermissionError:
-        raise PermissionError(f"杂鱼♡～没有权限检查文件大小喵：{path}～")
+        raise PermissionError(f"No permission to check file size: {path}")

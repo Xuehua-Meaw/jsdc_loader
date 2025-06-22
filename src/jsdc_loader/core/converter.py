@@ -47,12 +47,12 @@ def convert_enum(key: str, value: Any, enum_type: Type[Enum]) -> Enum:
             if isinstance(value, int):
                 return enum_type(value)
             else:
-                raise ValueError(f"杂鱼♡～Flag/IntFlag 类型 {enum_type} 需要整数值，得到 {type(value)} 喵！～")
+                raise ValueError(f"Flag/IntFlag type {enum_type} needs int value, got {type(value)}")
         else:
             # 杂鱼♡～普通枚举使用名称进行反序列化喵～
             return enum_type[value]
     except (KeyError, ValueError) as e:
-        raise ValueError(f"Invalid Enum value for key {key}: {value}") from e
+        raise ValueError(f"Invalid Enum value for key {key}: {value}")
 
 
 def convert_union_type(key: str, value: Any, union_type: Any) -> Any:
@@ -90,7 +90,7 @@ def convert_union_type(key: str, value: Any, union_type: Any) -> Any:
             continue
 
     # 如果所有转换都失败，则抛出错误喵～
-    raise TypeError(f"杂鱼♡～无法将键{key}的值{value}转换为{union_type}喵！～")
+    raise TypeError(f"Cannot convert value for key {key} to {union_type}")
 
 
 def _is_exact_type_match(value: Any, expected_type: Any) -> bool:
@@ -146,7 +146,7 @@ def convert_simple_type(key: str, value: Any, e_type: Any) -> Any:
             if isinstance(value, int):
                 return e_type(value)
             else:
-                raise ValueError(f"杂鱼♡～Flag/IntFlag 类型 {e_type} 需要整数值，得到 {type(value)} 喵！～")
+                raise ValueError(f"Flag/IntFlag type {e_type} needs int value, got {type(value)}")
         else:
             # 杂鱼♡～普通枚举使用名称进行反序列化喵～
             return e_type[value]
@@ -176,7 +176,7 @@ def convert_simple_type(key: str, value: Any, e_type: Any) -> Any:
         if e_type in (int, float, str, bool):
             if not isinstance(value, e_type):
                 raise TypeError(
-                    f"杂鱼♡～键{key}的类型无效喵：期望{e_type}，得到{type(value)}～"
+                    f"Key {key} has invalid type: expected {e_type}, got {type(value)}"
                 )
             return value
         
@@ -258,7 +258,7 @@ def convert_dict_type(key: str, value: dict, e_type: Any) -> dict:
         
         if not is_literal_key and not is_enum_key and key_type not in supported_key_types:
             raise ValueError(
-                f"杂鱼♡～字典键类型 {key_type} 暂不支持喵！支持的键类型: {supported_key_types}，以及Literal和Enum类型～"
+                f"Dictionary key type {key_type} is not supported. Supported types: {supported_key_types}, Literal and Enum types"
             )
 
         # 杂鱼♡～如果键类型不是字符串，需要转换JSON中的字符串键为目标类型喵～
@@ -278,31 +278,31 @@ def convert_dict_type(key: str, value: dict, e_type: Any) -> dict:
                         # 杂鱼♡～普通枚举使用名称喵～
                         converted_key = key_type[k]
                 except (ValueError, KeyError):
-                    raise ValueError(f"杂鱼♡～无法将键 '{k}' 转换为 {key_type} 喵！～")
+                    raise ValueError(f"Cannot convert key '{k}' to {key_type}")
             elif key_type == str:
                 converted_key = k
             elif key_type == int:
                 try:
                     converted_key = int(k)
                 except ValueError:
-                    raise ValueError(f"杂鱼♡～无法将键 '{k}' 转换为整数喵！～")
+                    raise ValueError(f"Cannot convert key '{k}' to int")
             elif key_type == float:
                 try:
                     converted_key = float(k)
                 except ValueError:
-                    raise ValueError(f"杂鱼♡～无法将键 '{k}' 转换为浮点数喵！～")
+                    raise ValueError(f"Cannot convert key '{k}' to float")
             elif key_type == bool:
                 if k.lower() in ("true", "1"):
                     converted_key = True
                 elif k.lower() in ("false", "0"):
                     converted_key = False
                 else:
-                    raise ValueError(f"杂鱼♡～无法将键 '{k}' 转换为布尔值喵！～")
+                    raise ValueError(f"Cannot convert key '{k}' to bool")
             elif key_type == uuid.UUID:
                 try:
                     converted_key = uuid.UUID(k)
                 except ValueError:
-                    raise ValueError(f"杂鱼♡～无法将键 '{k}' 转换为UUID喵！～")
+                    raise ValueError(f"Cannot convert key '{k}' to UUID")
             else:
                 converted_key = k  # 杂鱼♡～其他情况保持原样喵～
 
@@ -331,7 +331,7 @@ def convert_tuple_type(key: str, value: list, e_type: Any) -> tuple:
         elif args:  # Tuple[X, Y, Z]
             if len(value) != len(args):
                 raise ValueError(
-                    f"杂鱼♡～元组{key}的长度不匹配喵！期望{len(args)}，得到{len(value)}～"
+                    f"Tuple {key} length mismatch. Expected {len(args)}, got {len(value)}"
                 )
             return tuple(
                 convert_value(f"{key}[{i}]", item, arg_type)
@@ -673,7 +673,7 @@ def convert_dataclass_to_dict(
                     validate_type(item_key, item, element_type)
                 except (TypeError, ValueError) as e:
                     raise TypeError(
-                        f"杂鱼♡～序列化时frozenset元素类型验证失败喵：{item_key} {str(e)}～"
+                        f"Serialization failed for frozenset element type: {item_key} {str(e)}"
                     )
 
             result.append(
@@ -720,7 +720,7 @@ def convert_dataclass_to_dict(
                     validate_type(key_validation_name, k, key_type)
                 except (TypeError, ValueError) as e:
                     raise TypeError(
-                        f"杂鱼♡～序列化时defaultdict键类型验证失败喵：{key_validation_name} {str(e)}～"
+                        f"Serialization failed for defaultdict key type: {key_validation_name} {str(e)}"
                     )
             
             if val_type:
@@ -729,7 +729,7 @@ def convert_dataclass_to_dict(
                     validate_type(val_validation_name, v, val_type)
                 except (TypeError, ValueError) as e:
                     raise TypeError(
-                        f"杂鱼♡～序列化时defaultdict值类型验证失败喵：{val_validation_name} {str(e)}～"
+                        f"Serialization failed for defaultdict value type: {val_validation_name} {str(e)}"
                     )
             
             # 杂鱼♡～将键转换为字符串以支持JSON序列化喵～
@@ -782,7 +782,7 @@ def convert_dataclass_to_dict(
                     validate_type(item_key, item, element_type)
                 except (TypeError, ValueError) as e:
                     raise TypeError(
-                        f"杂鱼♡～序列化时集合元素类型验证失败喵：{item_key} {str(e)}～"
+                        f"Serialization failed for set element type: {item_key} {str(e)}"
                     )
 
             result.append(
@@ -805,7 +805,7 @@ def convert_dataclass_to_dict(
                     validate_type(item_key, item, element_type)
                 except (TypeError, ValueError) as e:
                     raise TypeError(
-                        f"杂鱼♡～序列化时列表元素类型验证失败喵：{item_key} {str(e)}～"
+                        f"Serialization failed for list element type: {item_key} {str(e)}"
                     )
 
             result.append(
@@ -832,7 +832,7 @@ def convert_dataclass_to_dict(
                     validate_type(key_name, k, key_type)
                 except (TypeError, ValueError) as e:
                     raise TypeError(
-                        f"杂鱼♡～序列化时字典键类型验证失败喵：{key_name} {str(e)}～"
+                        f"Serialization failed for dict key type: {key_name} {str(e)}"
                     )
 
             if val_type:
@@ -841,7 +841,7 @@ def convert_dataclass_to_dict(
                     validate_type(val_key, v, val_type)
                 except (TypeError, ValueError) as e:
                     raise TypeError(
-                        f"杂鱼♡～序列化时字典值类型验证失败喵：{val_key} {str(e)}～"
+                        f"Serialization failed for dict value type: {val_key} {str(e)}"
                     )
 
             # 杂鱼♡～将键转换为字符串以支持JSON序列化喵～
@@ -876,7 +876,7 @@ def convert_dataclass_to_dict(
                     validate_type(field_key, value, e_type)
                 except (TypeError, ValueError) as e:
                     raise TypeError(
-                        f"杂鱼♡～序列化时类型验证失败喵：字段 '{field_key}' {str(e)}～"
+                        f"Serialization failed for field type: {field_key} {str(e)}"
                     )
 
             # 杂鱼♡～转换值为字典喵～递归时传递字段类型～

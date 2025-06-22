@@ -12,7 +12,7 @@ T = TypeVar('T')
 def validate_target_type(target_type: Type) -> None:
     """杂鱼♡～验证目标类型是否有效喵～"""
     if not target_type:
-        raise TypeError("杂鱼♡～目标类型不能为None喵！～")
+        raise TypeError("Target type cannot be None")
     
     # 杂鱼♡～对于dataclass，需要特殊验证喵～
     if hasattr(target_type, '__origin__'):
@@ -82,7 +82,7 @@ class JSConverterV2:
             # 杂鱼♡～让类型和值错误直接传播，这是期望的行为喵～
             raise e
         except Exception as e:
-            raise RuntimeError(f"杂鱼♡～序列化失败了喵～: {str(e)}") from e
+            raise RuntimeError(f"Serialization failed: {str(e)}") from e
     
     def loads(self, json_str: str, target_type: Type[T]) -> T:
         """杂鱼♡～从JSON字符串反序列化对象喵～"""
@@ -97,12 +97,12 @@ class JSConverterV2:
             return self.dict_to_object(data, target_type)
             
         except json.JSONDecodeError as e:
-            raise ValueError(f"杂鱼♡～JSON格式错误喵～: {str(e)}") from e
+            raise ValueError(f"Invalid JSON: {str(e)}") from e
         except (ValueError, TypeError) as e:
             # 杂鱼♡～让类型和值错误直接传播，这是期望的行为喵～
             raise e
         except Exception as e:
-            raise RuntimeError(f"杂鱼♡～反序列化失败了喵～: {str(e)}") from e
+            raise RuntimeError(f"Deserialization failed: {str(e)}") from e
 
 
 # 杂鱼♡～创建全局转换器实例喵～
