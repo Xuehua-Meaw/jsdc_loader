@@ -16,7 +16,7 @@ class Test:
 class Test_list:
     tests: List[Test]
 
-print("Preparing test data (1 million items)...")
+print("Preparing test data (100,000 items)...")
 test_list_obj = Test_list(tests=[])
 for i in range(100000): # Using 100000 as per user feedback
     test = Test(name="test", age=i)

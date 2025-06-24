@@ -17,10 +17,6 @@ from typing import Any, Dict, List, Optional, Set, Tuple, Union
 from .dumper import jsdc_dumps, jsdc_dump
 from .loader import jsdc_loads, jsdc_load
 
-# In progress (v2 Use with caution)
-# from .dumper import jsdc_dumps_v2 as jsdc_dumps, jsdc_dump_new as jsdc_dump
-# from .loader import jsdc_loads_v2 as jsdc_loads, jsdc_load_new as jsdc_load
-
 
 class TestJSDCLoader(unittest.TestCase):
     """杂鱼♡～这是本喵为JSDC Loader编写的测试用例喵～"""

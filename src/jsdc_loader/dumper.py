@@ -13,7 +13,6 @@ from collections import defaultdict, deque
 from enum import Flag, IntFlag
 
 from .core.converter import convert_dataclass_to_dict
-from .core.converter_v2 import jsdc_dumps_v2
 from .core.types import T
 from .file_ops import ensure_directory_exists
 
@@ -102,10 +101,6 @@ def jsdc_dumps(obj: T, indent: int = 4, use_v2: bool = False) -> str:
     """
     if indent < 0:
         raise ValueError("Indent must be non-negative")
-
-    # 杂鱼♡～如果使用V2架构，直接调用新的处理器系统喵～
-    if use_v2:
-        return jsdc_dumps_v2(obj, type(obj), indent)
 
     try:
         if isinstance(obj, type):
@@ -216,104 +211,6 @@ def jsdc_dump(
                 except OSError:
                     pass  # 杂鱼♡～如果连临时文件都删不掉，本喵也无能为力了喵～
             raise e  # 杂鱼♡～重新抛出原始异常喵～
-
-    except OSError as e:
-        raise OSError(f"Failed to create directory or access file: {str(e)}")
-    except (ValueError, TypeError) as e:
-        # 杂鱼♡～让类型和值错误直接传播，这是期望的行为喵～
-        raise e
-    except Exception as e:
-        raise ValueError(f"Serialization error: {str(e)}")
-
-
-# 杂鱼♡～为了方便使用新架构，本喵提供专门的V2函数喵～
-def jsdc_dumps_new(obj: T, indent: int = 4) -> str:
-    """杂鱼♡～使用新架构的序列化函数喵～支持所有复杂类型～
-    
-    这是jsdc_dumps的V2版本，使用新的插件式类型处理器系统喵～
-    支持Flag、IntFlag、Deque、FrozenSet、defaultdict、Generic、Literal等复杂类型～
-    
-    Args:
-        obj (T): 要序列化的对象喵～可以是任何支持的类型～
-        indent (int, optional): JSON缩进空格数喵～默认4～
-        
-    Returns:
-        str: 序列化后的JSON字符串喵～
-        
-    Examples:
-        >>> from enum import Flag, auto
-        >>> from collections import deque
-        >>> @dataclass
-        >>> class Config:
-        ...     features: Flag
-        ...     history: Deque[str]
-        >>> config = Config(Features.A | Features.B, deque(['x', 'y']))
-        >>> json_str = jsdc_dumps_new(config)
-    """
-    return jsdc_dumps_v2(obj, type(obj), indent)
-
-
-def jsdc_dump_new(
-    obj: T, output_path: Union[str, Path], encoding: str = "utf-8", indent: int = 4
-) -> None:
-    """杂鱼♡～使用新架构的文件序列化函数喵～支持所有复杂类型～
-    
-    这是jsdc_dump的V2版本，使用新的插件式类型处理器系统喵～
-    
-    Args:
-        obj (T): 要序列化的对象喵～
-        output_path (Union[str, Path]): 输出文件路径喵～
-        encoding (str, optional): 文件编码喵～默认'utf-8'～
-        indent (int, optional): JSON缩进空格数喵～默认4～
-    """
-    # 杂鱼♡～本喵现在支持Path对象了喵～
-    path = Path(output_path)
-
-    if not path or not str(path):
-        raise ValueError("Invalid output path")
-
-    if indent < 0:
-        raise ValueError("Indent must be non-negative")
-
-    # 获取输出文件的绝对路径喵～
-    abs_path = path.absolute()
-    directory = abs_path.parent
-
-    try:
-        # 确保目录存在且可写喵～
-        ensure_directory_exists(str(directory))
-
-        # 杂鱼♡～使用新架构序列化喵～
-        json_str = jsdc_dumps_new(obj, indent)
-
-        # 杂鱼♡～使用临时文件进行安全写入喵～
-        temp_file = tempfile.NamedTemporaryFile(
-            prefix=f".{abs_path.name}.",
-            dir=str(directory),
-            suffix=".tmp",
-            delete=False,
-            mode="w",
-            encoding=encoding,
-        )
-
-        temp_path = temp_file.name
-        try:
-            temp_file.write(json_str)
-            temp_file.flush()
-            os.fsync(temp_file.fileno())
-            temp_file.close()
-
-            if abs_path.exists():
-                abs_path.unlink()
-
-            os.rename(temp_path, str(abs_path))
-        except Exception as e:
-            if os.path.exists(temp_path):
-                try:
-                    os.remove(temp_path)
-                except OSError:
-                    pass
-            raise e
 
     except OSError as e:
         raise OSError(f"Failed to create directory or access file: {str(e)}")

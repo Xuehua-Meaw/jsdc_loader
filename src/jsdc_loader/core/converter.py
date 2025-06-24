@@ -156,22 +156,24 @@ def convert_simple_type(key: str, value: Any, e_type: Any) -> Any:
     elif e_type == list or cached_get_origin(e_type) == list:
         # Handle list type properly
         return value
-    # 杂鱼♡～处理复杂类型喵～如日期、时间等
-    elif e_type == datetime.datetime and isinstance(value, str):
-        return datetime.datetime.fromisoformat(value)
-    elif e_type == datetime.date and isinstance(value, str):
-        return datetime.date.fromisoformat(value)
-    elif e_type == datetime.time and isinstance(value, str):
-        return datetime.time.fromisoformat(value)
-    elif e_type == datetime.timedelta and isinstance(value, (int, float)):
-        return datetime.timedelta(seconds=value)
-    elif e_type == datetime.timedelta and isinstance(value, dict):
-        return datetime.timedelta(**value)
-    elif e_type == uuid.UUID and isinstance(value, str):
-        return uuid.UUID(value)
-    elif e_type == Decimal and isinstance(value, (str, int, float)):
-        return Decimal(str(value))
+    # 杂鱼♡～优先使用映射表处理常见类型转换喵～
     else:
+        # 杂鱼♡～尝试使用反序列化映射表喵～
+        deserializer = _TYPE_DESERIALIZERS.get(e_type)
+        if deserializer is not None:
+            result = deserializer(value)
+            if result is not None:
+                return result
+        
+        # 杂鱼♡～处理特殊的timedelta情况喵～
+        if e_type == datetime.timedelta:
+            if isinstance(value, (int, float)):
+                return datetime.timedelta(seconds=value)
+            elif isinstance(value, dict):
+                return datetime.timedelta(**value)
+        elif e_type == Decimal and isinstance(value, (str, int, float)):
+            return Decimal(str(value))
+        
         # 杂鱼♡～对于基本类型，本喵需要先验证类型匹配喵～
         if e_type in (int, float, str, bool):
             if not isinstance(value, e_type):
@@ -565,6 +567,43 @@ def fast_is_dataclass(obj) -> bool:
     return result
 
 
+# 杂鱼♡～本喵创建了类型映射表，避免长长的if-elif链条喵～
+_TYPE_TO_STRING_MAP = {
+    datetime.datetime: "datetime",
+    datetime.date: "date",
+    datetime.time: "time", 
+    datetime.timedelta: "timedelta",
+    uuid.UUID: "uuid",
+    Decimal: "decimal",
+    tuple: "tuple",
+    set: "set",
+    frozenset: "frozenset",
+    list: "list",
+    dict: "dict",
+    deque: "deque",
+    defaultdict: "defaultdict",
+}
+
+# 杂鱼♡～本喵创建了简单序列化处理器映射表喵～
+_SIMPLE_SERIALIZERS = {
+    "datetime": lambda obj: obj.isoformat(),
+    "date": lambda obj: obj.isoformat(),
+    "time": lambda obj: obj.isoformat(),
+    "timedelta": lambda obj: obj.total_seconds(),
+    "uuid": lambda obj: str(obj),
+    "decimal": lambda obj: str(obj),
+    "enum": lambda obj: obj.name,
+    "flag": lambda obj: obj.value,
+}
+
+# 杂鱼♡～本喵创建了反序列化转换器映射表喵～
+_TYPE_DESERIALIZERS = {
+    datetime.datetime: lambda value: datetime.datetime.fromisoformat(value) if isinstance(value, str) else None,
+    datetime.date: lambda value: datetime.date.fromisoformat(value) if isinstance(value, str) else None,
+    datetime.time: lambda value: datetime.time.fromisoformat(value) if isinstance(value, str) else None,
+    uuid.UUID: lambda value: uuid.UUID(value) if isinstance(value, str) else None,
+}
+
 # 杂鱼♡～本喵添加了一个快速类型检查函数喵～
 def get_special_type(obj) -> str:
     """杂鱼♡～本喵快速检查对象的特殊类型喵～返回类型字符串或空字符串～"""
@@ -574,34 +613,14 @@ def get_special_type(obj) -> str:
     if obj_type in _SPECIAL_TYPE_CACHE:
         return _SPECIAL_TYPE_CACHE[obj_type]
     
-    # 杂鱼♡～检查特殊类型并缓存结果喵～
-    if obj_type is datetime.datetime:
-        result = "datetime"
-    elif obj_type is datetime.date:
-        result = "date"  
-    elif obj_type is datetime.time:
-        result = "time"
-    elif obj_type is datetime.timedelta:
-        result = "timedelta"
-    elif obj_type is uuid.UUID:
-        result = "uuid"
-    elif obj_type is Decimal:
-        result = "decimal"
-    elif obj_type is tuple:
-        result = "tuple"
-    elif obj_type is set:
-        result = "set"
-    elif obj_type is frozenset:
-        result = "frozenset"
-    elif obj_type is list:
-        result = "list"
-    elif obj_type is dict:
-        result = "dict"
-    elif obj_type is deque:
-        result = "deque"
-    elif obj_type is defaultdict:
-        result = "defaultdict"
-    elif issubclass(obj_type, (Flag, IntFlag)):
+    # 杂鱼♡～首先检查映射表，比if-elif更快喵～
+    result = _TYPE_TO_STRING_MAP.get(obj_type)
+    if result is not None:
+        _SPECIAL_TYPE_CACHE[obj_type] = result
+        return result
+    
+    # 杂鱼♡～处理需要继承检查的特殊情况喵～
+    if issubclass(obj_type, (Flag, IntFlag)):
         result = "flag"  # 杂鱼♡～专门为Flag/IntFlag类型添加支持喵～
     elif issubclass(obj_type, Enum):
         result = "enum"
@@ -627,19 +646,12 @@ def convert_dataclass_to_dict(
     # 杂鱼♡～本喵用快速类型检查来减少 isinstance 调用喵～
     special_type = get_special_type(obj)
     
-    if special_type == "datetime":
-        return obj.isoformat()
-    elif special_type == "date":
-        return obj.isoformat()
-    elif special_type == "time":
-        return obj.isoformat()
-    elif special_type == "timedelta":
-        return obj.total_seconds()
-    elif special_type == "uuid":
-        return str(obj)
-    elif special_type == "decimal":
-        return str(obj)
-    elif special_type == "tuple":
+    # 杂鱼♡～优先使用映射表处理简单序列化，比if-elif更高效喵～
+    simple_serializer = _SIMPLE_SERIALIZERS.get(special_type)
+    if simple_serializer is not None:
+        return simple_serializer(obj)
+    
+    if special_type == "tuple":
         # 杂鱼♡～对于元组，转换为列表返回喵～
         return [
             convert_dataclass_to_dict(
@@ -653,11 +665,6 @@ def convert_dataclass_to_dict(
             )
             for item in obj
         ]
-    elif special_type == "enum":
-        return obj.name
-    elif special_type == "flag":
-        # 杂鱼♡～Flag/IntFlag 枚举使用数值序列化喵～
-        return obj.value
     elif special_type == "frozenset":
         # 杂鱼♡～frozenset 需要特殊处理，转换为带类型标记的字典喵～
         element_type = None

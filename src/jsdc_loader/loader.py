@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Optional, Type, Union
 
 from .core import T, convert_dict_to_dataclass, validate_dataclass
-from .core.converter_v2 import jsdc_loads_v2
 from .file_ops import check_file_size
 
 
@@ -79,10 +78,6 @@ def jsdc_loads(json_str: str, target_class: Type[T], use_v2: bool = False) -> T:
     """
     if not json_str:
         raise ValueError("JSON string is empty")
-
-    # 杂鱼♡～如果使用V2架构，直接调用新的处理器系统喵～
-    if use_v2:
-        return jsdc_loads_v2(json_str, target_class)
 
     # 验证目标类喵～
     validate_dataclass(target_class)
