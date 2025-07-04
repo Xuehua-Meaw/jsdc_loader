@@ -81,7 +81,7 @@ class JSDCJSONEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
-def jsdc_dumps(obj: T, indent: int = 4, use_v2: bool = False) -> str:
+def jsdc_dumps(obj: T, indent: int = 4) -> str:
     """杂鱼♡～本喵帮你把dataclass实例序列化成JSON字符串喵～
 
     这个函数接收一个dataclass实例，并将其序列化为JSON字符串喵～
@@ -90,7 +90,6 @@ def jsdc_dumps(obj: T, indent: int = 4, use_v2: bool = False) -> str:
     Args:
         obj (T): 要序列化的dataclass实例喵～
         indent (int, optional): JSON输出中使用的缩进空格数喵～默认是4～看起来整齐一点～
-        use_v2 (bool, optional): 是否使用新的V2架构喵～默认False保持兼容性～
 
     Returns:
         str: 序列化后的JSON字符串喵～杂鱼可以好好利用它哦～
@@ -126,7 +125,7 @@ def jsdc_dumps(obj: T, indent: int = 4, use_v2: bool = False) -> str:
 
 
 def jsdc_dump(
-    obj: T, output_path: Union[str, Path], encoding: str = "utf-8", indent: int = 4, use_v2: bool = False
+    obj: T, output_path: Union[str, Path], encoding: str = "utf-8", indent: int = 4
 ) -> None:
     """杂鱼♡～本喵帮你把dataclass实例序列化成JSON文件喵～
 
@@ -141,7 +140,6 @@ def jsdc_dump(
         output_path (Union[str, Path]): 要保存JSON数据的输出文件路径喵～杂鱼现在可以用字符串或Path对象了♡～
         encoding (str, optional): 输出文件使用的字符编码喵～默认是'utf-8'～
         indent (int, optional): JSON输出中使用的缩进空格数喵～默认是4～看起来整齐一点～
-        use_v2 (bool, optional): 是否使用新的V2架构喵～默认False保持兼容性～
 
     Raises:
         ValueError: 如果提供的对象不是dataclass或路径无效，本喵会生气地抛出错误喵！～
@@ -173,7 +171,7 @@ def jsdc_dump(
             raise TypeError("obj must be a dataclass instance")
 
         # 杂鱼♡～先序列化为字符串喵～
-        json_str = jsdc_dumps(obj, indent, use_v2)
+        json_str = jsdc_dumps(obj, indent)
 
         # 杂鱼♡～使用临时文件进行安全写入喵～
         # 在同一目录创建临时文件，确保重命名操作在同一文件系统内执行喵～

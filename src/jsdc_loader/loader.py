@@ -13,7 +13,6 @@ def jsdc_load(
     target_class: Type[T],
     encoding: str = "utf-8",
     max_file_size: Optional[int] = None,
-    use_v2: bool = False,
 ) -> T:
     """杂鱼♡～本喵帮你从JSON文件加载数据并转换为指定的dataclass喵～
 
@@ -22,7 +21,6 @@ def jsdc_load(
         target_class (Type[T]): 目标dataclass类喵～
         encoding (str, optional): 文件编码，默认'utf-8'喵～
         max_file_size (Optional[int], optional): 最大文件大小（字节）喵～为None表示不限制～
-        use_v2 (bool, optional): 是否使用新的V2架构喵～默认False保持兼容性～
 
     Returns:
         T: 从JSON数据创建的实例喵～杂鱼应该感谢本喵～
@@ -51,7 +49,7 @@ def jsdc_load(
             raise ValueError("JSON file is empty")
 
         # 杂鱼♡～使用对应的加载方法喵～
-        return jsdc_loads(json_str, target_class, use_v2)
+        return jsdc_loads(json_str, target_class)
 
     except UnicodeDecodeError as e:
         raise ValueError(
@@ -61,13 +59,12 @@ def jsdc_load(
         raise ValueError(f"Loading or conversion error: {str(e)}")
 
 
-def jsdc_loads(json_str: str, target_class: Type[T], use_v2: bool = False) -> T:
+def jsdc_loads(json_str: str, target_class: Type[T]) -> T:
     """杂鱼♡～本喵帮你从JSON字符串加载数据并转换为指定的dataclass喵～
 
     Args:
         json_str (str): JSON字符串喵～杂鱼提供的内容要合法哦～
         target_class (Type[T]): 目标dataclass类喵～
-        use_v2 (bool, optional): 是否使用新的V2架构喵～默认False保持兼容性～
 
     Returns:
         T: 从JSON数据创建的实例喵～杂鱼应该感谢本喵～
@@ -95,57 +92,3 @@ def jsdc_loads(json_str: str, target_class: Type[T], use_v2: bool = False) -> T:
         raise ValueError(f"Invalid JSON: {str(e)}")
     except Exception as e:
         raise ValueError(f"Loading or conversion error: {str(e)}")
-
-
-# 杂鱼♡～为了方便使用新架构，本喵提供专门的V2函数喵～
-def jsdc_load_new(
-    file_path: Union[str, Path],
-    target_class: Type[T],
-    encoding: str = "utf-8",
-    max_file_size: Optional[int] = None,
-) -> T:
-    """杂鱼♡～使用新架构的文件加载函数喵～支持所有复杂类型～
-    
-    这是jsdc_load的V2版本，使用新的插件式类型处理器系统喵～
-    支持Flag、IntFlag、Deque、FrozenSet、defaultdict、Generic、Literal等复杂类型～
-    
-    Args:
-        file_path (Union[str, Path]): JSON文件路径喵～
-        target_class (Type[T]): 目标类喵～
-        encoding (str, optional): 文件编码喵～默认'utf-8'～
-        max_file_size (Optional[int], optional): 最大文件大小限制喵～
-        
-    Returns:
-        T: 反序列化的对象喵～
-        
-    Examples:
-        >>> from enum import Flag, auto
-        >>> from collections import deque
-        >>> @dataclass
-        >>> class Config:
-        ...     features: Flag
-        ...     history: Deque[str]
-        >>> config = jsdc_load_new("config.json", Config)
-        >>> assert isinstance(config.features, Flag)
-        >>> assert isinstance(config.history, deque)
-    """
-    return jsdc_load(file_path, target_class, encoding, max_file_size, use_v2=True)
-
-
-def jsdc_loads_new(json_str: str, target_class: Type[T]) -> T:
-    """杂鱼♡～使用新架构的字符串加载函数喵～支持所有复杂类型～
-    
-    这是jsdc_loads的V2版本，使用新的插件式类型处理器系统喵～
-    
-    Args:
-        json_str (str): JSON字符串喵～
-        target_class (Type[T]): 目标类喵～
-        
-    Returns:
-        T: 反序列化的对象喵～
-        
-    Examples:
-        >>> json_str = '{"features": 5, "history": {"__type__": "deque", "__data__": ["a", "b"]}}'
-        >>> config = jsdc_loads_new(json_str, Config)
-    """
-    return jsdc_loads_v2(json_str, target_class)
